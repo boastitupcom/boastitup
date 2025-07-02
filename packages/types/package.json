@@ -1,0 +1,12 @@
+{
+  "name": "@boastitup/types",
+  "version": "0.0.0",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "license": "MIT",
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "eslint": "^8.57.0"
+  }
+}
