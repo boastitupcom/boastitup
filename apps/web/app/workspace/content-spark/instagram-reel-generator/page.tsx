@@ -35,7 +35,7 @@ import {
   Target,
   Loader2
 } from "lucide-react";
-import { ProductGallery } from '@/components/ProductGallery';
+import { ProductGallery } from '@/components/content/ProductGallery';
 import { ProductImage } from '@/lib/services/azure-blob';
 
 interface ReelFormData {

@@ -1,5 +1,5 @@
 // app/dashboard/content-spark/seo-blog-writer/page.tsx
-import SEOAgentChat from '@/components/SEOAgentChat';
+import SEOAgentChat from '@/components/content/SEOAgentChat';
 
 export default function SEOChatPage() {
   return (

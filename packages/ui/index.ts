@@ -10,4 +10,4 @@ export * from "./src/components/ui/select";
 export * from "./src/components/ui/textarea";
 export * from "./src/components/ui/toast";
 export * from "./src/components/ui/separator";
-export * from "./src/components/ui/separator";
+export * from "./src/components/ui/dialog";
