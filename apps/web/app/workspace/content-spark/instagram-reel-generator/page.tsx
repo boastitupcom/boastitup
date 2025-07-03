@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue }  from '
 import { Badge }  from '@boastitup/ui';
 import { Separator }  from '@boastitup/ui';
 import { Alert, AlertDescription }  from '@boastitup/ui';
-import { useToast } from '@boastitup/hooks';
+import { useToast } from '@boastitup/hooks/src/use-toast';
 import {
   Video,
   Sparkles,
