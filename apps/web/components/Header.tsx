@@ -1,7 +1,7 @@
 // apps/web/components/Header.tsx
 import { ChevronDown } from 'lucide-react';
 
-export function Header() {
+export default function Header() {
   // In a real app, brands would be fetched dynamically
   const brands = ['One Science Nutrition | India'];
   return (
