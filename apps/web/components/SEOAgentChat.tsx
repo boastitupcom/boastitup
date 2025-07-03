@@ -8,9 +8,7 @@ import { ScrollArea } from '@boastitup/ui';
 import { Avatar, AvatarFallback } from '@boastitup/ui';
 import { Send, Bot, User, Loader2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-import { useSEOAgent } from '@boastitup/hooks';
-import useSEOOutline from '@boastitup/hooks';
+import { useSEOAgent, useSEOOutline } from '@boastitup/hooks';
 
 interface SEOAgentChatProps {
   sessionId: string;

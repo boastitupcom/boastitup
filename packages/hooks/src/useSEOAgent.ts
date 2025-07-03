@@ -197,4 +197,3 @@ export const useSEOAgent = (sessionId: string = 'default'): UseSEOAgentReturn =>
     conversationSummary
   };
 };
-export default useSEOAgent;

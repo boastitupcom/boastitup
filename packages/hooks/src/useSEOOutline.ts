@@ -33,7 +33,7 @@ interface UseSEOOutlineReturn {
   fetchOutline: (params: OutlineRequest) => void;
 }
 
-const useSEOOutline = (): UseSEOOutlineReturn => {
+export const useSEOOutline = (): UseSEOOutlineReturn => {
   const [outline, setOutline] = useState<OutlineResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,5 +75,3 @@ const useSEOOutline = (): UseSEOOutlineReturn => {
     fetchOutline
   };
 };
-
-export default useSEOOutline;

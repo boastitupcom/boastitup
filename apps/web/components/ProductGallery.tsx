@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@boastitup/ui';
+import { Button } from '@boastitup/ui';
+import { Alert, AlertDescription } from '@boastitup/ui';
 import { Loader2, Image as ImageIcon, ExternalLink, CheckCircle2, AlertCircle, Settings } from 'lucide-react';
 import clsx from 'clsx';
 

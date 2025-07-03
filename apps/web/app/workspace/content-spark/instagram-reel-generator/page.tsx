@@ -2,17 +2,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useToast } from "@/hooks/use-toast";
+import { createClient } from '@boastitup/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@boastitup/ui';
+import { Button }  from '@boastitup/ui';
+import { Input }  from '@boastitup/ui';
+import { Label }  from '@boastitup/ui';
+import { Textarea }  from '@boastitup/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue }  from '@boastitup/ui';
+import { Badge }  from '@boastitup/ui';
+import { Separator }  from '@boastitup/ui';
+import { Alert, AlertDescription }  from '@boastitup/ui';
+import { useToast } from '@boastitup/hooks';
 import {
   Video,
   Sparkles,
