@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@boastitup/supabase/server';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 export default async function AnalyticsPage() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   // Fetch the user's active tenant and first brand
