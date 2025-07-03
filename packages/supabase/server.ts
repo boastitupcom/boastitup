@@ -1,17 +1,7 @@
-// packages/supabase/index.ts
-import { createBrowserClient } from '@supabase/ssr'
-import { createServerClient, type CookieOptions } from '@supabase/server-client'
+// packages/supabase/server.ts
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-// For Client Components
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
-
-// For Server Components/Actions
 export function createSupabaseServerClient() {
     const cookieStore = cookies()
     return createServerClient(
@@ -21,6 +11,12 @@ export function createSupabaseServerClient() {
             cookies: {
                 get(name: string) {
                     return cookieStore.get(name)?.value
+                },
+                set(name: string, value: string, options: CookieOptions) {
+                    cookieStore.set({ name, value, ...options })
+                },
+                remove(name: string, options: CookieOptions) {
+                    cookieStore.set({ name, value: '', ...options })
                 },
             },
         }

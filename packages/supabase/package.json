@@ -1,15 +1,23 @@
 {
   "name": "@boastitup/supabase",
   "version": "0.0.0",
-  "main": "./index.ts",
-  "types": "./index.ts",
+  "private": true,
   "license": "MIT",
+  "exports": {
+    "./client": "./client.ts",
+    "./server": "./server.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0"
+  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.8"
+    "@supabase/ssr": "^0.5.1",
+    "@supabase/supabase-js": "2"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "eslint": "^8.57.0"
+    "eslint": "^8.57.0",
+    "typescript": "^5.3.3"
   }
 }

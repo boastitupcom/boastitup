@@ -8,8 +8,10 @@
       "@/components/*": ["components/*"],
       "@boastitup/ui": ["../../packages/ui"],
       "@boastitup/hooks": ["../../packages/hooks"],
-      "@boastitup/supabase": ["../../packages/supabase"],
-      "@boastitup/types": ["../../packages/types"]
+      "@boastitup/supabase/client": ["../../packages/supabase/client.ts"],
+      "@boastitup/supabase/server": ["../../packages/supabase/server.ts"],
+      "@boastitup/types": ["../../packages/types"],
+      "@boastitup/auth": ["../../packages/auth"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

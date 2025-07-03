@@ -1,0 +1,40 @@
+// apps/web/components/Sidebar.tsx
+'use client';
+import { Rocket, BarChart2, Star, Edit, MessageSquare, Instagram, Megaphone, BarChart, Settings } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const navItems = [
+  { href: '/workspace/analytics', label: 'Launchpad', icon: Rocket },
+  { href: '/workspace/market-details', label: 'Market Details', icon: BarChart2 },
+  { href: '/workspace/rank-boost', label: 'Rank Boost', icon: Star },
+  { href: '/workspace/content-spark', label: 'Content Spark', icon: Edit },
+  { href: '/workspace/social-vibe', label: 'Social Vibe', icon: MessageSquare },
+  { href: '/workspace/instagram-analysis', label: 'Instagram Analysis', icon: Instagram },
+  { href: '/workspace/ad-amplifier', label: 'Ad Amplifier', icon: Megaphone },
+  { href: '/workspace/performance', label: 'Performance', icon: BarChart },
+  { href: '/workspace/connect-hub', label: 'Connect Hub', icon: Settings },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+  return (
+    <aside className="w-64 flex-shrink-0 border-r border-gray-200 bg-white flex flex-col">
+      <div className="h-16 flex items-center justify-center border-b">
+        <h1 className="text-xl font-bold">BoastITUP</h1>
+      </div>
+      <nav className="flex-grow p-4">
+        <ul>
+          {navItems.map((item) => (
+            <li key={item.label}>
+              <Link href={item.href} className={`flex items-center p-3 rounded-lg text-sm font-medium transition-colors ${pathname === item.href ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}>
+                <item.icon className="w-5 h-5 mr-3" />
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </aside>
+  );
+}
