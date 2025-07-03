@@ -1,5 +1,5 @@
 // apps/web/app/workspace/layout.tsx
-import { createSupabaseServerClient } from '@boastitup/supabase';
+import { createSupabaseServerClient } from '@boastitup/supabase/server';
 import { redirect } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
