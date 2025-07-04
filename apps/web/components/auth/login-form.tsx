@@ -1,17 +1,17 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+import { createClient } from '@boastitup/supabase/client';
+import { Button } from "@boastitup/ui";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@boastitup/ui";
+import { Input } from "@boastitup/ui";
+import { Label } from "@boastitup/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

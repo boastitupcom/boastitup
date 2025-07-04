@@ -1,46 +1,50 @@
-// apps/web/app/api/cloudinary/images/route.ts
+// apps/web/app/api/cloudinary/search/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q');
     const folder = searchParams.get('folder') || 'content-spark-gallery';
     const maxResults = parseInt(searchParams.get('max_results') || '50');
-    const nextCursor = searchParams.get('next_cursor');
-    const tags = searchParams.get('tags')?.split(',').filter(Boolean);
+
+    if (!query) {
+      return NextResponse.json(
+        { error: 'Search query is required' },
+        { status: 400 }
+      );
+    }
 
     // Build search expression
     let expression = `folder:${folder}`;
-    if (tags && tags.length > 0) {
-      expression += ` AND tags:(${tags.join(' OR ')})`;
-    }
+    
+    // Add search conditions
+    const searchConditions = [
+      `filename:*${query}*`,
+      `tags:*${query}*`,
+      `context.alt:*${query}*`,
+      `context.caption:*${query}*`,
+    ];
+    
+    expression += ` AND (${searchConditions.join(' OR ')})`;
 
     const result = await cloudinary.search
       .expression(expression)
-      .sort_by('created_at', 'desc')
+      .sort_by([['created_at', 'desc']])
       .max_results(maxResults)
-      .next_cursor(nextCursor)
       .with_field('context')
       .with_field('tags')
       .execute();
 
     return NextResponse.json({
       images: result.resources,
-      next_cursor: result.next_cursor,
       total_count: result.total_count,
     });
   } catch (error) {
-    console.error('Error fetching images:', error);
+    console.error('Error searching images:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch images' },
+      { error: 'Failed to search images' },
       { status: 500 }
     );
   }
