@@ -5,31 +5,27 @@ import { createClient } from '@boastitup/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { useBrandStore } from '../store/brandStore'; // Import the store
+import type { Brand } from '@boastitup/types';
 
 interface HeaderProps {
   user: SupabaseUser | null;
 }
 
-interface Brand {
-  id: string;
-  name: string;
-  tenant_id: string;
-}
-
 export default function Header({ user }: HeaderProps) {
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [activeBrand, setActiveBrand] = useState<Brand | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showBrandMenu, setShowBrandMenu] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  
+  // Use the brand store
+  const { activeBrand, brands, setActiveBrand, setBrands } = useBrandStore();
 
   useEffect(() => {
     const fetchUserBrands = async () => {
       if (!user) return;
 
       try {
-        // Get user's active tenant
         const { data: userTenant } = await supabase
           .from('user_tenant_roles')
           .select('tenant_id')
@@ -38,46 +34,30 @@ export default function Header({ user }: HeaderProps) {
           .maybeSingle();
 
         if (userTenant?.tenant_id) {
-          // Get user's brands for the active tenant
           const { data: userBrands } = await supabase
             .from('user_brand_roles')
-            .select(`
-              brand_id,
-              brands!inner(id, name, tenant_id)
-            `)
+            .select('brand_id, brands!inner(id, name, tenant_id)')
             .eq('tenant_id', userTenant.tenant_id)
             .eq('user_id', user.id)
             .eq('is_active', true);
 
           if (userBrands) {
-            const brandsData = userBrands.map(ub => ({
-              id: ub.brands.id,
-              name: ub.brands.name,
-              tenant_id: ub.brands.tenant_id
-            }));
+            const brandsData = userBrands.map(ub => ub.brands as Brand);
             setBrands(brandsData);
-            
-            // Set the first brand as active by default
-            if (brandsData.length > 0) {
+            if (brandsData.length > 0 && !activeBrand) {
               setActiveBrand(brandsData[0]);
             }
           }
         }
       } catch (error) {
         console.error('Error fetching brands:', error);
-        // Fallback to demo data
-        const demoBrand = {
-          id: 'demo',
-          name: 'One Science Nutrition | India',
-          tenant_id: 'demo-tenant'
-        };
-        setBrands([demoBrand]);
-        setActiveBrand(demoBrand);
       }
     };
 
-    fetchUserBrands();
-  }, [user, supabase]);
+    if (user) {
+      fetchUserBrands();
+    }
+  }, [user, supabase, setBrands, setActiveBrand, activeBrand]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -88,8 +68,7 @@ export default function Header({ user }: HeaderProps) {
   const handleBrandSelect = (brand: Brand) => {
     setActiveBrand(brand);
     setShowBrandMenu(false);
-    // You might want to refresh the page or update context here
-    router.refresh();
+    router.refresh(); 
   };
 
   return (
@@ -150,24 +129,6 @@ export default function Header({ user }: HeaderProps) {
         {showUserMenu && (
           <div className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
             <div className="p-2">
-              <div className="px-3 py-2 border-b border-gray-100">
-                <div className="font-medium text-gray-800">
-                  {user?.user_metadata?.full_name || 'User'}
-                </div>
-                <div className="text-sm text-gray-500">{user?.email}</div>
-              </div>
-              
-              <button
-                onClick={() => {
-                  setShowUserMenu(false);
-                  router.push('/workspace/settings');
-                }}
-                className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <Settings className="w-4 h-4 mr-3" />
-                Settings
-              </button>
-              
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
@@ -180,7 +141,6 @@ export default function Header({ user }: HeaderProps) {
         )}
       </div>
 
-      {/* Click outside to close menus */}
       {(showUserMenu || showBrandMenu) && (
         <div 
           className="fixed inset-0 z-40"

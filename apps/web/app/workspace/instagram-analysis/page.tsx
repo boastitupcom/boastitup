@@ -1,3 +1,4 @@
+// apps/web/app/workspace/instagram-analysis/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,109 +10,19 @@ import {
   getHealthScoreColor,
   getRecommendationColor
 } from '@boastitup/hooks';
-import { createClient } from '@boastitup/supabase/client';
-
-interface Brand {
-  id: string;
-  name: string;
-  tenant_id: string;
-}
-
-// Hook to get the current user's active brand
-function useActiveBrand() {
-  const [activeBrand, setActiveBrand] = useState<Brand | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const supabase = createClient();
-
-  useEffect(() => {
-    const fetchActiveBrand = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          throw new Error('User not authenticated');
-        }
-
-        // Get user's active tenant
-        const { data: userTenant } = await supabase
-          .from('user_tenant_roles')
-          .select('tenant_id')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (userTenant?.tenant_id) {
-          // Get user's first active brand for the tenant
-          const { data: userBrand } = await supabase
-            .from('user_brand_roles')
-            .select(`
-              brand_id,
-              brands!inner(id, name, tenant_id)
-            `)
-            .eq('tenant_id', userTenant.tenant_id)
-            .eq('user_id', user.id)
-            .eq('is_active', true)
-            .limit(1)
-            .maybeSingle();
-
-          if (userBrand?.brands) {
-            const brand: Brand = {
-              id: userBrand.brands.id,
-              name: userBrand.brands.name,
-              tenant_id: userBrand.brands.tenant_id
-            };
-            setActiveBrand(brand);
-          } else {
-            // Fallback to demo brand
-            setActiveBrand({
-              id: 'd96060ac-48b6-447f-9161-9d7f8619cdfa',
-              name: 'One Science Nutrition | India',
-              tenant_id: 'demo-tenant'
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching active brand:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch brand');
-        // Fallback to demo brand
-        setActiveBrand({
-          id: 'd96060ac-48b6-447f-9161-9d7f8619cdfa',
-          name: 'One Science Nutrition | India',
-          tenant_id: 'demo-tenant'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchActiveBrand();
-  }, [supabase]);
-
-  return { activeBrand, loading, error };
-}
+import { useBrandStore } from '../../../store/brandStore';
 
 const InstagramAnalysisPage = () => {
   const [dateRange, setDateRange] = useState('30d');
-  const { activeBrand, loading: brandLoading, error: brandError } = useActiveBrand();
-  const { analysis, posts, hashtags, trends, loading: dataLoading, error: dataError, refreshData } = useInstagramAnalysis(activeBrand?.id || null, dateRange);
-
-  // Combined loading state
-  const loading = brandLoading || dataLoading;
-  const error = brandError || dataError;
+  const { activeBrand } = useBrandStore();
+  const { analysis, posts, hashtags, trends, loading, error, refreshData } = useInstagramAnalysis(activeBrand?.id || null, dateRange);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {brandLoading ? 'Loading brand information...' : 'Loading Instagram analysis...'}
-          </p>
+          <p className="text-gray-600">Loading Instagram analysis...</p>
         </div>
       </div>
     );
@@ -134,36 +45,16 @@ const InstagramAnalysisPage = () => {
     );
   }
 
-  if (!activeBrand) {
+  if (!activeBrand || !analysis) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-600 mb-4">No Brand Selected</h2>
+          <h2 className="text-2xl font-bold text-gray-600 mb-4">
+            { !activeBrand ? "No Brand Selected" : "No Analysis Data" }
+          </h2>
           <p className="text-gray-500 mb-4">
-            Please select a brand from the header to view Instagram analysis.
+            { !activeBrand ? "Please select a brand from the header." : `No analysis data for ${activeBrand.name}.` }
           </p>
-          <p className="text-sm text-gray-400">
-            {brandError && `Error: ${brandError}`}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!analysis) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-600 mb-4">No Analysis Data</h2>
-          <p className="text-gray-500 mb-4">
-            No Instagram analysis data found for {activeBrand.name}.
-          </p>
-          <button
-            onClick={refreshData}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Refresh Data
-          </button>
         </div>
       </div>
     );
@@ -506,7 +397,6 @@ const InstagramAnalysisPage = () => {
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* Right Sidebar */}
@@ -581,7 +471,6 @@ const InstagramAnalysisPage = () => {
                 ))}
               </div>
             </div>
-
           </div>
         </div>
       </div>
