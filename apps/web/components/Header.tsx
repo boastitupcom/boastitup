@@ -5,7 +5,8 @@ import { createClient } from '@boastitup/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { useBrandStore } from '../store/brandStore'; // Import the store
+import { useBrandStore } from '../store/brandStore';
+import { useIndustryStore } from '../store/industryStore';
 import type { Brand } from '@boastitup/types';
 
 interface HeaderProps {
@@ -18,8 +19,9 @@ export default function Header({ user }: HeaderProps) {
   const router = useRouter();
   const supabase = createClient();
   
-  // Use the brand store
-  const { activeBrand, brands, setActiveBrand, setBrands } = useBrandStore();
+  // Use both brand and industry stores
+  const { activeBrand, brands, setBrands, handleBrandChange } = useBrandStore();
+  const { activeIndustry, setActiveIndustry } = useIndustryStore();
 
   useEffect(() => {
     const fetchUserBrands = async () => {
@@ -34,18 +36,36 @@ export default function Header({ user }: HeaderProps) {
           .maybeSingle();
 
         if (userTenant?.tenant_id) {
+          // Updated query to include industry information
           const { data: userBrands } = await supabase
             .from('user_brand_roles')
-            .select('brand_id, brands!inner(id, name, tenant_id)')
+            .select(`
+              brand_id, 
+              brands!inner(
+                id, 
+                name, 
+                tenant_id, 
+                industry_id,
+                industry:industries(name, slug)
+              )
+            `)
             .eq('tenant_id', userTenant.tenant_id)
             .eq('user_id', user.id)
             .eq('is_active', true);
 
           if (userBrands) {
-            const brandsData = userBrands.map(ub => ub.brands as Brand);
+            const brandsData = userBrands.map(ub => {
+              const brand = ub.brands as any;
+              return {
+                ...brand,
+                industry: brand.industry?.name || 'fitness' // Default to fitness if no industry
+              } as Brand;
+            });
+            
             setBrands(brandsData);
+            
             if (brandsData.length > 0 && !activeBrand) {
-              setActiveBrand(brandsData[0]);
+              handleBrandChange(brandsData[0]);
             }
           }
         }
@@ -57,7 +77,7 @@ export default function Header({ user }: HeaderProps) {
     if (user) {
       fetchUserBrands();
     }
-  }, [user, supabase, setBrands, setActiveBrand, activeBrand]);
+  }, [user, supabase, setBrands, handleBrandChange, activeBrand]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -66,7 +86,7 @@ export default function Header({ user }: HeaderProps) {
   };
 
   const handleBrandSelect = (brand: Brand) => {
-    setActiveBrand(brand);
+    handleBrandChange(brand); // Use the enhanced method that updates industry too
     setShowBrandMenu(false);
     router.refresh(); 
   };
@@ -79,9 +99,16 @@ export default function Header({ user }: HeaderProps) {
           onClick={() => setShowBrandMenu(!showBrandMenu)}
           className="flex items-center p-2 rounded-lg border hover:bg-gray-50 transition-colors"
         >
-          <span className="font-semibold text-gray-800">
-            {activeBrand?.name || 'Select Brand...'}
-          </span>
+          <div className="flex flex-col items-start">
+            <span className="font-semibold text-gray-800">
+              {activeBrand?.name || 'Select Brand...'}
+            </span>
+            {activeBrand?.industry && (
+              <span className="text-xs text-gray-500">
+                {activeIndustry?.name || activeBrand.industry}
+              </span>
+            )}
+          </div>
           <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
         </button>
         
@@ -94,14 +121,21 @@ export default function Header({ user }: HeaderProps) {
                     key={brand.id}
                     onClick={() => handleBrandSelect(brand)}
                     className={`w-full text-left p-2 rounded-md hover:bg-gray-50 transition-colors ${
-                      activeBrand?.id === brand.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                      activeBrand?.id === brand.id ? 'bg-blue-50 border border-blue-200' : ''
                     }`}
                   >
-                    {brand.name}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{brand.name}</span>
+                      {brand.industry && (
+                        <span className="text-xs text-gray-500">{brand.industry}</span>
+                      )}
+                    </div>
                   </button>
                 ))
               ) : (
-                <div className="p-2 text-gray-500 text-sm">No brands available</div>
+                <div className="p-4 text-center text-gray-500">
+                  No brands found
+                </div>
               )}
             </div>
           </div>
@@ -110,46 +144,35 @@ export default function Header({ user }: HeaderProps) {
 
       {/* User Menu */}
       <div className="relative">
-        <button
+        <button 
           onClick={() => setShowUserMenu(!showUserMenu)}
-          className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+          className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="hidden md:block text-left">
-            <div className="text-sm font-medium text-gray-800">
-              {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
-            </div>
-            <div className="text-xs text-gray-500">{user?.email}</div>
-          </div>
-          <ChevronDown className="w-4 h-4 text-gray-500" />
+          <User className="w-5 h-5 text-gray-600" />
+          <span className="ml-2 text-sm text-gray-700">
+            {user?.email?.split('@')[0] || 'User'}
+          </span>
+          <ChevronDown className="w-4 h-4 ml-1 text-gray-500" />
         </button>
-
+        
         {showUserMenu && (
-          <div className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-            <div className="p-2">
-              <button
+          <div className="absolute top-full right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+            <div className="p-1">
+              <button className="w-full text-left p-2 rounded-md hover:bg-gray-50 transition-colors flex items-center">
+                <Settings className="w-4 h-4 mr-2 text-gray-500" />
+                Settings
+              </button>
+              <button 
                 onClick={handleLogout}
-                className="w-full flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                className="w-full text-left p-2 rounded-md hover:bg-gray-50 transition-colors flex items-center text-red-600"
               >
-                <LogOut className="w-4 h-4 mr-3" />
-                Sign Out
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
               </button>
             </div>
           </div>
         )}
       </div>
-
-      {(showUserMenu || showBrandMenu) && (
-        <div 
-          className="fixed inset-0 z-40"
-          onClick={() => {
-            setShowUserMenu(false);
-            setShowBrandMenu(false);
-          }}
-        />
-      )}
     </header>
   );
 }

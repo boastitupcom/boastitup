@@ -38,6 +38,8 @@ export interface Brand {
   id: string;
   name: string;
   tenant_id: string;
+  industry_id?: string; // Add optional industry_id field
+  industry?: string; // Add optional industry name field for convenience
   created_at?: string;
   updated_at?: string;
 }

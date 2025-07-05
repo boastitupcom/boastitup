@@ -1,9 +1,8 @@
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
+// packages/hooks/src/use-instagram-analysis.ts - Updated with industry support
+import { useState, useEffect } from 'react';
 import { createClient } from '@boastitup/supabase/client';
 
-// Types matching the database schema
+// Types
 export interface InstagramAnalysis {
   id: string;
   tenant_id: string;
@@ -27,16 +26,8 @@ export interface InstagramAnalysis {
   avg_likes_per_post: number;
   avg_comments_per_post: number;
   avg_shares_per_post: number;
-  content_mix: {
-    reels: number;
-    photos: number;
-    carousels: number;
-  };
-  audience_demographics: {
-    age_groups: Record<string, number>;
-    gender: Record<string, number>;
-    top_locations: string[];
-  };
+  content_mix: Record<string, any>;
+  audience_demographics: Record<string, any>;
   sentiment_positive: number;
   sentiment_neutral: number;
   sentiment_negative: number;
@@ -67,7 +58,7 @@ export interface InstagramPost {
   brand_id: string;
   instagram_post_id: string;
   post_url: string;
-  post_type: 'reel' | 'photo' | 'carousel';
+  post_type: string;
   post_date: string;
   caption: string;
   hashtags: string[];
@@ -187,7 +178,7 @@ export const getRecommendationColor = (priority: string): string => {
   }
 };
 
-// Main hook for Instagram Analysis
+// Enhanced hook with industry-aware trends
 export function useInstagramAnalysis(brandId: string | null, dateRange: string = '30d') {
   const [data, setData] = useState<InstagramDashboardData>({
     analysis: null,
@@ -195,270 +186,176 @@ export function useInstagramAnalysis(brandId: string | null, dateRange: string =
     hashtags: [],
     trends: null,
     loading: true,
-    error: null
+    error: null,
   });
 
   const supabase = createClient();
 
-  const loadData = useCallback(async () => {
-    if (!brandId) {
-      setData(prev => ({ ...prev, loading: false, error: 'No brand ID provided' }));
-      return;
-    }
-
-    setData(prev => ({ ...prev, loading: true, error: null }));
-
-    try {
-      // Get latest analysis
-      const { data: analysis, error: analysisError } = await supabase
-        .from('instagram_analysis')
-        .select('*')
-        .eq('brand_id', brandId)
-        .order('analysis_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (analysisError) throw analysisError;
-
-      if (!analysis) {
-        setData(prev => ({ ...prev, loading: false, error: 'No analysis data found' }));
+  useEffect(() => {
+    async function fetchInstagramData() {
+      if (!brandId) {
+        setData(prev => ({ ...prev, loading: false, error: 'No brand selected' }));
         return;
       }
 
-      // Get posts for this analysis
-      const { data: posts, error: postsError } = await supabase
-        .from('instagram_posts')
-        .select('*')
-        .eq('analysis_id', analysis.id)
-        .order('viral_score', { ascending: false });
+      setData(prev => ({ ...prev, loading: true, error: null }));
 
-      if (postsError) throw postsError;
+      try {
+        // Fetch the latest analysis for the brand
+        const { data: analysisData, error: analysisError } = await supabase
+          .from('instagram_analysis')
+          .select('*')
+          .eq('brand_id', brandId)
+          .order('analysis_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      // Get hashtags for this analysis
-      const { data: hashtags, error: hashtagsError } = await supabase
-        .from('instagram_hashtags')
-        .select('*')
-        .eq('analysis_id', analysis.id)
-        .order('avg_engagement_rate', { ascending: false });
+        if (analysisError) throw analysisError;
 
-      if (hashtagsError) throw hashtagsError;
+        let postsData: InstagramPost[] = [];
+        let hashtagsData: InstagramHashtag[] = [];
 
-      // Get latest trends for fitness industry
-      const { data: trends, error: trendsError } = await supabase
-        .from('instagram_trends')
-        .select('*')
-        .eq('industry', 'fitness')
-        .order('trend_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        // If we have analysis data, fetch related posts and hashtags
+        if (analysisData) {
+          const [postsResult, hashtagsResult] = await Promise.all([
+            supabase
+              .from('instagram_posts')
+              .select('*')
+              .eq('analysis_id', analysisData.id)
+              .order('viral_score', { ascending: false })
+              .limit(10),
+            supabase
+              .from('instagram_hashtags')
+              .select('*')
+              .eq('analysis_id', analysisData.id)
+              .order('avg_engagement_rate', { ascending: false })
+              .limit(10)
+          ]);
 
-      if (trendsError) throw trendsError;
+          if (postsResult.error) throw postsResult.error;
+          if (hashtagsResult.error) throw hashtagsResult.error;
 
-      setData({
-        analysis,
-        posts: posts || [],
-        hashtags: hashtags || [],
-        trends,
-        loading: false,
-        error: null
-      });
+          postsData = postsResult.data || [];
+          hashtagsData = hashtagsResult.data || [];
+        }
 
-    } catch (error) {
-      console.error('Error loading Instagram analysis:', error);
-      setData(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to load data'
-      }));
+        // Fetch industry-specific trends using the database function
+        const { data: trendsData, error: trendsError } = await supabase
+          .rpc('get_industry_trends', { brand_id: brandId });
+
+        if (trendsError) {
+          console.warn('Could not fetch industry trends:', trendsError);
+        }
+
+        // If no industry-specific trends found, fetch default fitness trends
+        let finalTrendsData = trendsData?.[0] || null;
+        
+        if (!finalTrendsData) {
+          const { data: defaultTrends } = await supabase
+            .from('instagram_trends')
+            .select('*')
+            .eq('industry', 'fitness')
+            .order('trend_date', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          finalTrendsData = defaultTrends;
+        }
+
+        setData({
+          analysis: analysisData,
+          posts: postsData,
+          hashtags: hashtagsData,
+          trends: finalTrendsData,
+          loading: false,
+          error: null,
+        });
+
+      } catch (error) {
+        console.error('Error fetching Instagram data:', error);
+        setData(prev => ({
+          ...prev,
+          loading: false,
+          error: error instanceof Error ? error.message : 'Unknown error occurred',
+        }));
+      }
     }
+
+    fetchInstagramData();
   }, [brandId, dateRange, supabase]);
 
-  const refreshData = useCallback(async () => {
-    await loadData();
-  }, [loadData]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  return {
-    ...data,
-    refreshData
-  };
+  return data;
 }
 
-// Hook for real-time data updates
-export function useInstagramAnalysisRealtime(brandId: string | null) {
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+// Hook to fetch available industries
+export function useIndustries() {
+  const [industries, setIndustries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const supabase = createClient();
 
   useEffect(() => {
-    if (!brandId) return;
-
-    // Subscribe to real-time updates
-    const subscription = supabase
-      .channel('instagram_analysis_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'instagram_analysis',
-          filter: `brand_id=eq.${brandId}`
-        },
-        (payload) => {
-          console.log('Instagram analysis updated:', payload);
-          setLastUpdated(new Date());
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [brandId, supabase]);
-
-  return { lastUpdated };
-}
-
-// Hook for exporting data
-export function useInstagramAnalysisExport() {
-  const [exporting, setExporting] = useState(false);
-
-  const exportToCSV = useCallback(async (data: InstagramDashboardData) => {
-    setExporting(true);
-    try {
-      const csvData = [
-        ['Metric', 'Value', 'Change'],
-        ['Followers', data.analysis?.followers_count || 0, `${data.analysis?.followers_growth_rate || 0}%`],
-        ['Engagement Rate', `${data.analysis?.engagement_rate || 0}%`, `${data.analysis?.engagement_rate_change || 0}%`],
-        ['Monthly Reach', data.analysis?.monthly_reach || 0, `${data.analysis?.monthly_reach_change || 0}%`],
-        ['Profile Visits', data.analysis?.profile_visits || 0, `${data.analysis?.profile_visits_change || 0}%`],
-        ['Health Score', `${data.analysis?.health_score || 0}/10`, data.analysis?.health_score_grade || ''],
-        [],
-        ['Top Posts'],
-        ['Post Type', 'Engagement Rate', 'Views', 'Viral Score'],
-        ...data.posts.filter(p => p.is_top_performer).map(post => [
-          post.post_type,
-          `${post.engagement_rate}%`,
-          post.views_count,
-          post.viral_score
-        ])
-      ];
-
-      const csvContent = csvData.map(row => row.join(',')).join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `instagram-analysis-${new Date().getTime()}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-    } catch (error) {
-      console.error('CSV export failed:', error);
-      throw error;
-    } finally {
-      setExporting(false);
-    }
-  }, []);
-
-  return {
-    exportToCSV,
-    exporting
-  };
-}
-
-// Hook for managing AI recommendations
-export function useInstagramRecommendations(analysisId: string | null) {
-  const [loading, setLoading] = useState(false);
-  const supabase = createClient();
-
-  const refreshRecommendations = useCallback(async () => {
-    if (!analysisId) return;
-
-    setLoading(true);
-    try {
-      // TODO: Call your AI service to generate new recommendations
-      // For now, this would update the ai_recommendations JSONB field
-      
-      const newRecommendations = [
-        {
-          type: 'engagement_boost',
-          title: '📈 Boost Engagement',
-          description: 'Post Reels on Tuesday 6-8 PM using trending audio',
-          expected_impact: '+15% engagement',
-          priority: 'high'
-        },
-        {
-          type: 'content_strategy', 
-          title: '🎯 Content Strategy',
-          description: 'Create "Myth vs Fact" carousel series about trending topics',
-          expected_impact: '+25% reach',
-          priority: 'high'
-        }
-      ];
-
-      // Update recommendations in database
-      const { error } = await supabase
-        .from('instagram_analysis')
-        .update({ ai_recommendations: newRecommendations })
-        .eq('id', analysisId);
-
-      if (error) throw error;
-
-    } catch (error) {
-      console.error('Failed to refresh recommendations:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [analysisId, supabase]);
-
-  const markRecommendationAsImplemented = useCallback(async (recommendationIndex: number) => {
-    if (!analysisId) return;
-
-    try {
-      // Get current analysis
-      const { data: analysis, error: fetchError } = await supabase
-        .from('instagram_analysis')
-        .select('ai_recommendations')
-        .eq('id', analysisId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Mark recommendation as implemented
-      const recommendations = [...(analysis.ai_recommendations || [])];
-      if (recommendations[recommendationIndex]) {
-        recommendations[recommendationIndex] = {
-          ...recommendations[recommendationIndex],
-          implemented: true,
-          implemented_at: new Date().toISOString()
-        };
-
-        // Update in database
-        const { error } = await supabase
-          .from('instagram_analysis')
-          .update({ ai_recommendations: recommendations })
-          .eq('id', analysisId);
+    async function fetchIndustries() {
+      try {
+        const { data, error } = await supabase
+          .from('industries')
+          .select('*')
+          .order('name');
 
         if (error) throw error;
+
+        setIndustries(data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch industries');
+      } finally {
+        setLoading(false);
       }
-
-    } catch (error) {
-      console.error('Failed to mark recommendation as implemented:', error);
-      throw error;
     }
-  }, [analysisId, supabase]);
 
-  return {
-    refreshRecommendations,
-    markRecommendationAsImplemented,
-    loading
-  };
+    fetchIndustries();
+  }, [supabase]);
+
+  return { industries, loading, error };
 }
 
-export default useInstagramAnalysis;
+// Hook to get brand's industry
+export function useBrandIndustry(brandId: string | null) {
+  const [industry, setIndustry] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchBrandIndustry() {
+      if (!brandId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('brands')
+          .select(`
+            industry_id,
+            industry:industries(name, slug)
+          `)
+          .eq('id', brandId)
+          .single();
+
+        if (error) throw error;
+
+        setIndustry(data?.industry?.name || 'fitness');
+      } catch (err) {
+        console.error('Error fetching brand industry:', err);
+        setIndustry('fitness'); // Default fallback
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBrandIndustry();
+  }, [brandId, supabase]);
+
+  return { industry, loading };
+}
