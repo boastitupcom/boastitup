@@ -45,7 +45,7 @@ import {
 import Image from 'next/image';
 import { useMediaGallery, MediaItem } from '@boastitup/hooks/src/useMediaGallery';
 import { CloudinaryAPIService, formatFileSize, formatDate } from '@/lib/cloudinary-api';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 
 type ContentType = 'all' | 'images' | 'videos';
 type InstagramType = 'all' | 'source' | 'carousel' | 'final' | 'reel';
@@ -54,7 +54,9 @@ export default function ContentGalleryPage() {
   const { toast } = useToast();
   
   // Initialize Cloudinary service
-  const cloudinaryService = new CloudinaryAPIService(CloudinaryAPIService.getConfig());
+  const cloudinaryService = useMemo(() => {
+  return new CloudinaryAPIService(CloudinaryAPIService.getConfig());
+}, []); // Empty dependency array ensures it's created only once
   
   // Use the media gallery hook
   const gallery = useMediaGallery({
