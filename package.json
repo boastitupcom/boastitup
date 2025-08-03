@@ -1,5 +1,5 @@
 {
-  "name": "boastitup_v2",
+  "name": "boastitup_v3",
   "private": true,
   "scripts": {
     "build": "turbo run build",

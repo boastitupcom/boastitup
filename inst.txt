@@ -1,0 +1,138 @@
+Refactor BoastItUp Monorepo to v3 Boilerplate
+Inbox
+
+
+Use below process build it and them test it on your local. also run pnpn build command to check the build errors Acceptance Criteria (AC):
+
+AC1: Core Application Structure (apps/web) is Cleaned:
+
+The apps/web/app/workspace/ directory contains only layout.tsx (no content-spark/ or analytics/).
+
+apps/web/app/auth/, apps/web/app/page.tsx, and apps/web/app/layout.tsx are present and represent the public and authentication entry points.
+
+apps/web/views/ retains Header.tsx, Sidebar.tsx, and AuthButton.tsx.
+
+apps/web/lib/ and apps/web/store/ directories are present (even if empty initially).
+
+AC2: Shared UI Package (packages/ui) is Maintained:
+
+The packages/ui/ directory and its sub-structure (components/ui/, lib/utils.ts, components.json, index.ts) are preserved, ready for shadcn/ui components.
+
+AC3: Shared Hooks Package (packages/hooks) is Minimized:
+
+The packages/hooks/src/ directory is present.
+
+Specific hooks (use-instagram-analysis.ts, use-toast.ts, useMediaGallery.ts) are removed from packages/hooks/src/.
+
+packages/hooks/index.ts is present but exports no specific hooks initially.
+
+AC4: Essential Shared Packages are Preserved:
+
+packages/supabase/ (with client.ts, server.ts, types.ts) is present for Supabase integration.
+
+packages/types/ is present for shared TypeScript definitions.
+
+packages/auth/ is present for authentication utilities.
+
+packages/eslint-config/ and packages/typescript-config/ are present for consistent tooling.
+
+AC5: Turborepo Configuration (turbo.json) and Workspace Setup (pnpm-workspace.yaml, package.json) are Functional:
+
+turbo.json is configured to support the new structure.
+
+pnpm-workspace.yaml correctly defines the workspace.
+
+The root package.json is updated to reflect the new boastitup_v3 project name and dependencies.
+
+AC6: Boilerplate Code is Provided:
+
+Minimal, functional placeholder code is provided for the remaining files to ensure the project can be set up and run.
+
+The code includes a basic Header, Footer, and a simple landing page for the workspace to demonstrate the structure.
+
+Basic Supabase client integration is shown.
+
+boastitup_v3/
+
+├── apps/
+
+│   ├── web/                    # Main Next.js application
+
+│   │   ├── app/               # Next.js App Router pages
+
+│   │   │   ├── workspace/     # Protected workspace routes
+
+│   │   │   │   ├──
+
+│   │   │   │   └── layout.tsx # Workspace layout
+
+│   │   │   ├── auth/          # Authentication pages
+
+│   │   │   ├── page.tsx       # Root page
+
+│   │   │   └── layout.tsx     # Root layout
+
+│   │   ├── views/             # Shared view components
+
+│   │   │   ├── Header.tsx
+
+│   │   │   ├── Sidebar.tsx
+
+│   │   │   └── AuthButton.tsx
+
+│   │   ├── lib/               # Utility functions
+
+│   │   ├── store/             # Zustand state management
+
+│   │   └── package.json
+
+│   └── docs/                  # Documentation site (optional)
+
+├── packages/
+
+│   ├── ui/                    # Shared UI component library
+
+│   │   ├── components/
+
+│   │   │   └── ui/           # shadcn/ui components
+
+│   │   ├── lib/
+
+│   │   │   └── utils.ts      # Utility functions
+
+│   │   ├── components.json   # shadcn/ui config
+
+│   │   └── index.ts          # Component exports
+
+│   ├── hooks/                 # Shared React hooks
+
+│   │   ├── src/
+
+
+
+│   │   └── index.ts
+
+│   ├── supabase/             # Supabase client/server utilities
+
+│   │   ├── client.ts         # Client-side Supabase
+
+│   │   ├── server.ts         # Server-side Supabase
+
+│   │   └── types.ts
+
+│   ├── types/                # Shared TypeScript types
+
+│   ├── auth/                 # Authentication utilities
+
+│   ├── eslint-config/        # Shared ESLint configuration
+
+│   └── typescript-config/    # Shared TypeScript configuration
+
+├── turbo.json                # Turborepo configuration
+
+├── package.json              # Root package.json
+
+├── pnpm-workspace.yaml       # PNPM workspace config
+
+└── README.md 
+
