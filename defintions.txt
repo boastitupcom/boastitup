@@ -1,0 +1,125 @@
+v daily top trends definition:
+create view public.v_daily_top_trends as
+select
+  id,
+  tenant_id,
+  brand_id,
+  trend_name,
+  trend_type,
+  category,
+  subcategory,
+  volume,
+  growth_percentage,
+  volume_change_24h,
+  volume_change_7d,
+  velocity_score,
+  velocity_category,
+  race_position,
+  sentiment_score,
+  confidence_score,
+  opportunity_score,
+  primary_platform,
+  primary_region,
+  trend_date,
+  status
+from
+  unified_trends
+where
+  trend_date = CURRENT_DATE
+order by
+  velocity_score desc,
+  growth_percentage desc
+limit
+  100;
+
+
+
+unified trends definition:
+create table public.unified_trends (
+  id uuid not null default gen_random_uuid (),
+  tenant_id uuid not null,
+  brand_id uuid null,
+  trend_name character varying not null,
+  trend_type public.trend_source_type not null,
+  category character varying null,
+  subcategory character varying null,
+  volume integer not null default 0,
+  growth_percentage numeric not null default 0,
+  volume_change_24h integer null default 0,
+  volume_change_7d integer null default 0,
+  velocity_score numeric not null default 0,
+  velocity_category public.trend_velocity not null default 'steady'::trend_velocity,
+  race_position integer null default 0,
+  sentiment_score numeric null,
+  confidence_score numeric null,
+  opportunity_score integer null default 0,
+  primary_platform public.social_platform null,
+  primary_region character varying null,
+  related_hashtags character varying[] null,
+  related_keywords character varying[] null,
+  trend_date date not null default CURRENT_DATE,
+  trend_start_date date null,
+  status public.trend_status null default 'opportunity'::trend_status,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  constraint unified_trends_pkey primary key (id),
+  constraint unified_trends_brand_id_fkey foreign KEY (brand_id) references brands (id),
+  constraint unified_trends_tenant_id_fkey foreign KEY (tenant_id) references tenants (id),
+  constraint unified_trends_confidence_score_check check (
+    (
+      (confidence_score >= 0.0)
+      and (confidence_score <= 1.0)
+    )
+  ),
+  constraint unified_trends_opportunity_score_check check (
+    (
+      (opportunity_score >= 0)
+      and (opportunity_score <= 100)
+    )
+  ),
+  constraint unified_trends_sentiment_score_check check (
+    (
+      (sentiment_score >= '-1.0'::numeric)
+      and (sentiment_score <= 1.0)
+    )
+  ),
+  constraint unified_trends_velocity_score_check check (
+    (
+      (velocity_score >= 0.0)
+      and (velocity_score <= 1.0)
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_unified_trends_velocity_race on public.unified_trends using btree (tenant_id, velocity_score desc) TABLESPACE pg_default;
+
+create index IF not exists idx_unified_trends_category on public.unified_trends using btree (category, trend_date desc) TABLESPACE pg_default;
+
+
+10 rows of data present in @e:\boastitup_v2/data.json 
+
+trend race data view definition:
+create view public.v_trend_race_data as
+select
+  trend_name,
+  velocity_score,
+  race_position,
+  trend_date,
+  category,
+  primary_platform
+from
+  unified_trends
+where
+  trend_date = CURRENT_DATE
+order by
+  race_position,
+  velocity_score desc;
+
+get filtered trends:
+[
+  {
+    "function_name": "get_filtered_trends",
+    "arguments": "p_tenant_id uuid, p_category character varying DEFAULT NULL::character varying, p_trend_type trend_source_type DEFAULT NULL::trend_source_type, p_start_date date DEFAULT NULL::date, p_end_date date DEFAULT NULL::date",
+    "return_type": "SETOF unified_trends"
+  }
+]

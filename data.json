@@ -1,0 +1,443 @@
+[
+  {
+    "id": "8476d853-9bb0-4f88-b7df-edfa237e432b",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Community Fitness Challenges",
+    "trend_type": "social",
+    "category": "Fitness",
+    "subcategory": "Community",
+    "volume": 29800,
+    "growth_percentage": "114.3",
+    "volume_change_24h": 6200,
+    "volume_change_7d": 14800,
+    "velocity_score": "0.66",
+    "velocity_category": "rising",
+    "race_position": 8,
+    "sentiment_score": "0.71",
+    "confidence_score": "0.69",
+    "opportunity_score": 66,
+    "primary_platform": "facebook",
+    "primary_region": "Global",
+    "related_hashtags": [
+      "#fitnesschallenge",
+      "#communityfitness",
+      "#groupgoals",
+      "#togetherstrong"
+    ],
+    "related_keywords": [
+      "fitness challenge",
+      "community workout",
+      "group fitness",
+      "team training"
+    ],
+    "trend_date": "2025-08-05",
+    "trend_start_date": "2025-07-10",
+    "status": "tracking",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "24c85137-a15a-4956-85e8-09e0d403077a",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "AI-Powered Workout Plans",
+    "trend_type": "social",
+    "category": "Fitness Technology",
+    "subcategory": "Personalization",
+    "volume": 52000,
+    "growth_percentage": "312.5",
+    "volume_change_24h": 15200,
+    "volume_change_7d": 34000,
+    "velocity_score": "0.94",
+    "velocity_category": "surging",
+    "race_position": 1,
+    "sentiment_score": "0.78",
+    "confidence_score": "0.89",
+    "opportunity_score": 94,
+    "primary_platform": "instagram",
+    "primary_region": "North America",
+    "related_hashtags": [
+      "#aiworkout",
+      "#personalizedtraining",
+      "#fittech",
+      "#smartfitness"
+    ],
+    "related_keywords": [
+      "ai workout",
+      "personalized training",
+      "smart fitness",
+      "custom workout plan"
+    ],
+    "trend_date": "2025-08-05",
+    "trend_start_date": "2025-07-22",
+    "status": "opportunity",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "689f26ce-3f04-4802-bed3-71518d2e3b3c",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Recovery-First Training",
+    "trend_type": "social",
+    "category": "Wellness",
+    "subcategory": "Recovery",
+    "volume": 41000,
+    "growth_percentage": "198.4",
+    "volume_change_24h": 10800,
+    "volume_change_7d": 24200,
+    "velocity_score": "0.83",
+    "velocity_category": "surging",
+    "race_position": 4,
+    "sentiment_score": "0.74",
+    "confidence_score": "0.81",
+    "opportunity_score": 83,
+    "primary_platform": "instagram",
+    "primary_region": "Australia",
+    "related_hashtags": [
+      "#recoveryfirst",
+      "#activerecovery",
+      "#restday",
+      "#healingfitness"
+    ],
+    "related_keywords": [
+      "recovery training",
+      "active recovery",
+      "rest day workout",
+      "healing fitness"
+    ],
+    "trend_date": "2025-08-05",
+    "trend_start_date": "2025-07-20",
+    "status": "tracking",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "dd4f5bb0-1cc4-42e9-a29d-f3d8a73abdc9",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Micro-Fitness Routines",
+    "trend_type": "social",
+    "category": "Fitness",
+    "subcategory": "Time Management",
+    "volume": 48000,
+    "growth_percentage": "287.3",
+    "volume_change_24h": 13800,
+    "volume_change_7d": 29500,
+    "velocity_score": "0.91",
+    "velocity_category": "surging",
+    "race_position": 2,
+    "sentiment_score": "0.72",
+    "confidence_score": "0.86",
+    "opportunity_score": 91,
+    "primary_platform": "tiktok",
+    "primary_region": "Global",
+    "related_hashtags": [
+      "#microfitness",
+      "#quickworkout",
+      "#5minutefitness",
+      "#busylife"
+    ],
+    "related_keywords": [
+      "micro workout",
+      "5 minute fitness",
+      "quick exercise",
+      "busy lifestyle"
+    ],
+    "trend_date": "2025-08-05",
+    "trend_start_date": "2025-07-28",
+    "status": "tracking",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "b839c2d6-27ed-4bf8-9f73-b01b01df3387",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Flexibility and Mobility Focus",
+    "trend_type": "social",
+    "category": "Fitness",
+    "subcategory": "Flexibility",
+    "volume": 19200,
+    "growth_percentage": "54.5",
+    "volume_change_24h": 3100,
+    "volume_change_7d": 7800,
+    "velocity_score": "0.47",
+    "velocity_category": "steady",
+    "race_position": 13,
+    "sentiment_score": "0.61",
+    "confidence_score": "0.56",
+    "opportunity_score": 47,
+    "primary_platform": "instagram",
+    "primary_region": "Europe",
+    "related_hashtags": [
+      "#flexibility",
+      "#mobility",
+      "#stretching",
+      "#movementquality"
+    ],
+    "related_keywords": [
+      "flexibility training",
+      "mobility work",
+      "stretching routine",
+      "movement quality"
+    ],
+    "trend_date": "2025-08-05",
+    "trend_start_date": "2025-06-28",
+    "status": "opportunity",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "8af96c51-fb66-4819-a0b9-10b1946c0647",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Hybrid Fitness Classes",
+    "trend_type": "web",
+    "category": "Fitness",
+    "subcategory": "Class Formats",
+    "volume": 44000,
+    "growth_percentage": "245.7",
+    "volume_change_24h": 12100,
+    "volume_change_7d": 26800,
+    "velocity_score": "0.87",
+    "velocity_category": "surging",
+    "race_position": 3,
+    "sentiment_score": "0.68",
+    "confidence_score": "0.83",
+    "opportunity_score": 87,
+    "primary_platform": "youtube",
+    "primary_region": "Europe",
+    "related_hashtags": [
+      "#hybridfitness",
+      "#mixedworkout",
+      "#varietytraining",
+      "#crosstraining"
+    ],
+    "related_keywords": [
+      "hybrid training",
+      "mixed workout",
+      "cross training",
+      "variety fitness"
+    ],
+    "trend_date": "2025-08-04",
+    "trend_start_date": "2025-07-25",
+    "status": "opportunity",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "fa959db3-1efa-4edf-adcc-894d1490184c",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Mindful Movement Practices",
+    "trend_type": "web",
+    "category": "Wellness",
+    "subcategory": "Mindfulness",
+    "volume": 35000,
+    "growth_percentage": "142.8",
+    "volume_change_24h": 7800,
+    "volume_change_7d": 18500,
+    "velocity_score": "0.74",
+    "velocity_category": "rising",
+    "race_position": 6,
+    "sentiment_score": "0.76",
+    "confidence_score": "0.75",
+    "opportunity_score": 74,
+    "primary_platform": "instagram",
+    "primary_region": "Global",
+    "related_hashtags": [
+      "#mindfulmovement",
+      "#consciousfitness",
+      "#presentworkout",
+      "#mindfultraining"
+    ],
+    "related_keywords": [
+      "mindful exercise",
+      "conscious fitness",
+      "present moment workout",
+      "meditation movement"
+    ],
+    "trend_date": "2025-08-04",
+    "trend_start_date": "2025-07-15",
+    "status": "tracking",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "6c0f203e-21f6-42e4-a76a-0231568fc374",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Senior Fitness Programs",
+    "trend_type": "web",
+    "category": "Fitness",
+    "subcategory": "Age-Specific",
+    "volume": 22500,
+    "growth_percentage": "74.2",
+    "volume_change_24h": 4200,
+    "volume_change_7d": 10100,
+    "velocity_score": "0.54",
+    "velocity_category": "steady",
+    "race_position": 11,
+    "sentiment_score": "0.67",
+    "confidence_score": "0.61",
+    "opportunity_score": 54,
+    "primary_platform": "facebook",
+    "primary_region": "Global",
+    "related_hashtags": [
+      "#seniorfitness",
+      "#50plusfitness",
+      "#matureathletes",
+      "#agingwell"
+    ],
+    "related_keywords": [
+      "senior fitness",
+      "50 plus fitness",
+      "mature athletes",
+      "aging well"
+    ],
+    "trend_date": "2025-08-04",
+    "trend_start_date": "2025-07-02",
+    "status": "opportunity",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "af0e6fcc-f910-42f0-b204-47905bb2ae11",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Plant-Based Performance Nutrition",
+    "trend_type": "web",
+    "category": "Nutrition",
+    "subcategory": "Plant-Based",
+    "volume": 24900,
+    "growth_percentage": "87.4",
+    "volume_change_24h": 4800,
+    "volume_change_7d": 11600,
+    "velocity_score": "0.58",
+    "velocity_category": "steady",
+    "race_position": 10,
+    "sentiment_score": "0.62",
+    "confidence_score": "0.64",
+    "opportunity_score": 58,
+    "primary_platform": "youtube",
+    "primary_region": "North America",
+    "related_hashtags": [
+      "#plantbasedathlete",
+      "#veganfitness",
+      "#plantprotein",
+      "#greennutrition"
+    ],
+    "related_keywords": [
+      "plant based nutrition",
+      "vegan fitness",
+      "plant protein",
+      "green nutrition"
+    ],
+    "trend_date": "2025-08-03",
+    "trend_start_date": "2025-07-05",
+    "status": "tracking",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  },
+  {
+    "id": "265ff36b-7186-4614-a776-fb3059295b02",
+    "tenant_id": "07582af5-5f8b-4fa8-b785-14e2b2252287",
+    "brand_id": "4743e593-3f09-4eba-96b4-c4c1413bca47",
+    "trend_name": "Outdoor Fitness Adventures",
+    "trend_type": "social",
+    "category": "Fitness",
+    "subcategory": "Outdoor Activities",
+    "volume": 38500,
+    "growth_percentage": "176.2",
+    "volume_change_24h": 9200,
+    "volume_change_7d": 21600,
+    "velocity_score": "0.79",
+    "velocity_category": "rising",
+    "race_position": 5,
+    "sentiment_score": "0.69",
+    "confidence_score": "0.78",
+    "opportunity_score": 79,
+    "primary_platform": "youtube",
+    "primary_region": "North America",
+    "related_hashtags": [
+      "#outdoorfitness",
+      "#natureworkout",
+      "#adventurefitness",
+      "#freshair"
+    ],
+    "related_keywords": [
+      "outdoor workout",
+      "nature fitness",
+      "adventure training",
+      "fresh air exercise"
+    ],
+    "trend_date": "2025-08-03",
+    "trend_start_date": "2025-07-18",
+    "status": "opportunity",
+    "created_at": "2025-08-05 03:48:38.792252+00",
+    "updated_at": "2025-08-05 03:48:38.792252+00"
+  }
+]
+
+// data from views
+
+[
+  {
+    "trend_name": "AI-Powered Workout Plans",
+    "velocity_score": "0.94",
+    "race_position": 1,
+    "trend_date": "2025-08-05",
+    "category": "Fitness Technology",
+    "primary_platform": "instagram"
+  },
+  {
+    "trend_name": "Micro-Fitness Routines",
+    "velocity_score": "0.91",
+    "race_position": 2,
+    "trend_date": "2025-08-05",
+    "category": "Fitness",
+    "primary_platform": "tiktok"
+  },
+  {
+    "trend_name": "Recovery-First Training",
+    "velocity_score": "0.83",
+    "race_position": 4,
+    "trend_date": "2025-08-05",
+    "category": "Wellness",
+    "primary_platform": "instagram"
+  },
+  {
+    "trend_name": "Community Fitness Challenges",
+    "velocity_score": "0.66",
+    "race_position": 8,
+    "trend_date": "2025-08-05",
+    "category": "Fitness",
+    "primary_platform": "facebook"
+  },
+  {
+    "trend_name": "Flexibility and Mobility Focus",
+    "velocity_score": "0.47",
+    "race_position": 13,
+    "trend_date": "2025-08-05",
+    "category": "Fitness",
+    "primary_platform": "instagram"
+  }
+]
+
+// tenant ids
+[
+  {
+    "id": "07582af5-5f8b-4fa8-b785-14e2b2252287"
+  },
+  {
+    "id": "3502a726-179f-49e8-b380-43a2d6e4f765"
+  },
+  {
+    "id": "7c7f75a8-8175-409d-b651-2f32ef12ee49"
+  },
+  {
+    "id": "daa87b89-93ef-4184-9657-f1cbcec40a7d"
+  }
+]

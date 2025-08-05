@@ -1,4 +1,6 @@
 // apps/web/app/workspace/page.tsx
+import Link from 'next/link';
+
 export default function WorkspacePage() {
   return (
     <div className="p-6">
@@ -42,11 +44,13 @@ export default function WorkspacePage() {
               Analytics
             </h3>
             <p className="text-gray-600 mb-4">
-              Monitor your performance and growth metrics.
+              Monitor your performance and growth metrics with trend analysis.
             </p>
-            <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors">
-              View Analytics
-            </button>
+            <Link href="/workspace/analytics">
+              <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors">
+                View Analytics
+              </button>
+            </Link>
           </div>
         </div>
 

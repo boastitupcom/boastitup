@@ -8,7 +8,7 @@
     "@supabase/ssr": "^0.5.1"
   },
   "devDependencies": {
-    "@boastitup/typescript-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "typescript": "^5"
   }
 }
