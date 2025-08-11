@@ -12,6 +12,7 @@ import { AIInsights } from './AIInsights';
 import { StatusDonutChart } from './StatusDonutChart';
 import { EndDateBarChart } from './EndDateBarChart';
 import { InsightsColumn } from './InsightsColumn';
+import { OKRDebugInfo } from './OKRDebugInfo';
 import { useCurrentPerformanceOKRs, useAttentionMetrics, useOKRTrendAnalysis } from '../../hooks/useOKRData';
 import { useBrandStore } from '../../store/brandStore';
 import { AlertTriangle, Target, BarChart3, Eye, Brain } from 'lucide-react';
@@ -166,6 +167,8 @@ export function OKRDashboard() {
       </div>
 
       <OKRFilters />
+
+      {/* <OKRDebugInfo /> */}
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-none lg:inline-flex">
