@@ -134,8 +134,8 @@ export function InsightsColumn({ brandId, needAttentionCount, className = '' }: 
       ) : insights && insights.length > 0 ? (
         <div className="space-y-3">
           {insights.slice(0, 5).map((insight) => {
-            const Icon = getInsightIcon(insight.insight_type);
-            const colorClass = getInsightColor(insight.insight_type);
+            const Icon = getInsightIcon(insight.insight_type || 'recommendation');
+            const colorClass = getInsightColor(insight.insight_type || 'recommendation');
             
             return (
               <Card key={insight.id} className="hover:shadow-sm transition-shadow">
@@ -148,24 +148,24 @@ export function InsightsColumn({ brandId, needAttentionCount, className = '' }: 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="font-semibold text-sm text-gray-900 leading-tight">
-                            {insight.title}
+                            {insight.title || 'Untitled Insight'}
                           </h4>
                           <Badge 
-                            className={`text-xs ${getPriorityColor(insight.priority)} flex-shrink-0`}
+                            className={`text-xs ${getPriorityColor(insight.priority || 'medium')} flex-shrink-0`}
                             variant="outline"
                           >
-                            {insight.priority.toUpperCase()}
+                            {(insight.priority || 'medium').toUpperCase()}
                           </Badge>
                         </div>
                         <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                          {insight.description.length > 100 
+                          {insight.description && insight.description.length > 100 
                             ? `${insight.description.substring(0, 100)}...`
-                            : insight.description
+                            : insight.description || 'No description available'
                           }
                         </p>
                         <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                          <span className="capitalize">{insight.insight_type}</span>
-                          <span>{insight.confidence_score}% confidence</span>
+                          <span className="capitalize">{insight.insight_type || 'insight'}</span>
+                          <span>{insight.confidence_score || 0}% confidence</span>
                         </div>
                       </div>
                     </div>
