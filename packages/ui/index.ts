@@ -11,3 +11,4 @@ export * from "./src/components/ui/textarea";
 export * from "./src/components/ui/toast";
 export * from "./src/components/ui/separator";
 export * from "./src/components/ui/dialog";
+export * from "./src/components/ui/tabs";

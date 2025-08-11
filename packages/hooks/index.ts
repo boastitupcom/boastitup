@@ -1,2 +1,4 @@
 // packages/hooks/index.ts
-// No hooks exported initially - ready for future hook additions
+export { useOKRSnapshot } from './useOKRSnapshot';
+export { useKPIScoreCards } from './useKPIScoreCards';
+export { useDashboardFilters } from './useDashboardFilters';
