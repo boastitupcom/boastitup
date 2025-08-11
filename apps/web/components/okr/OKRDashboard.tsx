@@ -9,6 +9,9 @@ import { MetricsTable } from './MetricsTable';
 import { OKRTrendChart } from './OKRTrendChart';
 import { OKRFilters } from './OKRFilters';
 import { AIInsights } from './AIInsights';
+import { StatusDonutChart } from './StatusDonutChart';
+import { EndDateBarChart } from './EndDateBarChart';
+import { InsightsColumn } from './InsightsColumn';
 import { useCurrentPerformanceOKRs, useAttentionMetrics, useOKRTrendAnalysis } from '../../hooks/useOKRData';
 import { useBrandStore } from '../../store/brandStore';
 import { AlertTriangle, Target, BarChart3, Eye, Brain } from 'lucide-react';
@@ -55,6 +58,34 @@ export function OKRDashboard() {
       return true;
     });
   }, [currentOKRs, filterCategory, filterStatus, searchQuery]);
+
+  // Calculate overview stats
+  const overviewStats = React.useMemo(() => {
+    const total = filteredMetrics.length;
+    const statusCounts = {
+      'Target Achieved': 0,
+      'On Track': 0,
+      'Behind': 0,
+      'At Risk': 0,
+      'Not Started': 0,
+    };
+
+    filteredMetrics.forEach(metric => {
+      if (statusCounts.hasOwnProperty(metric.performance_status)) {
+        statusCounts[metric.performance_status as keyof typeof statusCounts]++;
+      }
+    });
+
+    const completionRate = total > 0 ? Math.round((statusCounts['Target Achieved'] / total) * 100) : 0;
+    const atRiskCount = statusCounts['At Risk'] + statusCounts['Behind'];
+
+    return {
+      total,
+      completionRate,
+      onTrack: statusCounts['On Track'],
+      needAttention: atRiskCount,
+    };
+  }, [filteredMetrics]);
 
   const handleOKRClick = (okr: any) => {
     setSelectedOKRId(okr.okr_id || okr.id);
@@ -159,31 +190,72 @@ export function OKRDashboard() {
         </TabsList>
 
         <TabsContent value="Overview" className="space-y-6">
-          <DashboardStats metrics={filteredMetrics} />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Recent OKRs</h3>
-                <div className="grid gap-4">
-                  {filteredMetrics.slice(0, 3).map((okr, index) => (
-                    <OKRCard 
-                      key={index} 
-                      okr={okr} 
-                      onClick={() => handleOKRClick(okr)}
-                      className="cursor-pointer hover:shadow-sm"
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          {/* Two-column layout: 70% left, 30% right */}
+          <div className="grid grid-cols-1 xl:grid-cols-10 gap-6">
+            {/* Left Column - 7/10 width (70%) */}
+            <div className="xl:col-span-7 space-y-6">
+              {/* Top Row - Three KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Total OKRs Card */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total OKRs</p>
+                        <p className="text-2xl font-bold text-gray-900">{overviewStats.total}</p>
+                      </div>
+                      <div className="bg-blue-50 p-3 rounded-full">
+                        <Target className="h-6 w-6 text-blue-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            {trendData && trendData.length > 0 && (
-              <OKRTrendChart 
-                data={trendData} 
-                title="Performance Trends"
+                {/* Completion Rate Card */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Completion Rate</p>
+                        <p className="text-2xl font-bold text-gray-900">{overviewStats.completionRate}%</p>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded-full">
+                        <BarChart3 className="h-6 w-6 text-green-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* On Track Card */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">On Track</p>
+                        <p className="text-2xl font-bold text-gray-900">{overviewStats.onTrack}</p>
+                      </div>
+                      <div className="bg-emerald-50 p-3 rounded-full">
+                        <Eye className="h-6 w-6 text-emerald-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Bottom Row - Two Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <StatusDonutChart metrics={filteredMetrics} />
+                <EndDateBarChart metrics={filteredMetrics} />
+              </div>
+            </div>
+
+            {/* Right Column - 3/10 width (30%) */}
+            <div className="xl:col-span-3">
+              <InsightsColumn 
+                brandId={activeBrand?.id} 
+                needAttentionCount={overviewStats.needAttention}
               />
-            )}
+            </div>
           </div>
         </TabsContent>
 
