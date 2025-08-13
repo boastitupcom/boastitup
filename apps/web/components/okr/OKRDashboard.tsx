@@ -45,14 +45,14 @@ export function OKRDashboard() {
       }
       
       // Status filter
-      if (filterStatus !== 'All' && okr.performance_status !== filterStatus) {
+      if (filterStatus !== 'All' && (okr.status || okr.performance_status) !== filterStatus) {
         return false;
       }
       
       // Search filter
       if (searchQuery.trim() && 
-          !okr.objective_name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !okr.metric_name.toLowerCase().includes(searchQuery.toLowerCase())) {
+          !(okr.title || okr.objective_name || '').toLowerCase().includes(searchQuery.toLowerCase()) &&
+          !okr.metric_name?.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
       
@@ -72,8 +72,9 @@ export function OKRDashboard() {
     };
 
     filteredMetrics.forEach(metric => {
-      if (statusCounts.hasOwnProperty(metric.performance_status)) {
-        statusCounts[metric.performance_status as keyof typeof statusCounts]++;
+      const status = metric.status || metric.performance_status;
+      if (status && statusCounts.hasOwnProperty(status)) {
+        statusCounts[status as keyof typeof statusCounts]++;
       }
     });
 

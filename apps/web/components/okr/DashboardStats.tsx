@@ -7,11 +7,16 @@ import { calculateOKRStatus } from '../../utils/okrCalculations';
 import { Target, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface OKRMetric {
-  objective_name: string;
-  metric_name: string;
+  // New field names from v_okr_performance
+  title?: string;
+  status?: string;
+  target_value?: number;
+  // Backward compatibility
+  objective_name?: string;
+  metric_name?: string;
   current_value: number;
-  metric_target_value: number;
-  performance_status: string;
+  metric_target_value?: number;
+  performance_status?: string;
   okr_category?: string;
 }
 

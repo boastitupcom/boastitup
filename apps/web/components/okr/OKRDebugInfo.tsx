@@ -12,12 +12,12 @@ export function OKRDebugInfo() {
 
   if (isLoading) return <div>Loading debug info...</div>;
 
-  // Group by objective_name to see duplicates
+  // Group by title/objective_name to see duplicates
   const duplicateAnalysis = React.useMemo(() => {
     if (!currentOKRs) return {};
     
     const grouped = currentOKRs.reduce((acc, okr) => {
-      const key = okr.objective_name;
+      const key = okr.title || okr.objective_name;
       if (!acc[key]) {
         acc[key] = [];
       }

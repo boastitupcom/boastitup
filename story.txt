@@ -1,0 +1,596 @@
+# OKR Performance Dashboard - Complete Technical Story
+
+## 1. Overview
+
+### User Story
+As a business manager, I want to view real-time OKR performance metrics and AI-powered insights so that I can monitor key objectives and results across all business units and make data-driven decisions.
+
+### Acceptance Criteria
+- [ ] The user can navigate to the /workspace/okr-dashboard route
+- [ ] The page correctly displays the MetricCardGrid and AIInsights components
+- [ ] The page is fully responsive, matching the UX requirements for desktop, tablet, and mobile
+- [ ] All data is fetched from the specified Supabase sources: v_dashboard_metric_cards_complete and v_ai_insights_enriched
+- [ ] Loading states (skeletons) and error states (messages) are implemented
+- [ ] Metric cards display appropriate icons, values, status indicators, progress bars, and action buttons
+- [ ] AI insights are sorted by priority and include action recommendations
+- [ ] Data refreshes on refresh button click
+- [ ] No hardcoded data - everything from Supabase
+
+## 2. TypeScript Interfaces
+
+```typescript
+// Database response types matching Supabase views
+interface DashboardMetric {
+  okr_id: string
+  tenant_id: string
+  brand_id: string
+  card_title: string
+  main_value: string
+  daily_change_percentage: number | null
+  daily_change_absolute: number | null
+  change_direction: 'up' | 'down' | 'stable' | null
+  icon_type: 'revenue' | 'instagram' | 'tiktok' | 'customers' | 'orders' | 'repeat_purchase'
+  card_status: 'On Track' | 'At Risk' | 'Behind' | 'No Data'
+  target_value: number
+  current_value: number
+  progress_percentage: number
+  platform_name: string
+  metric_description: string
+  metric_unit: string
+  last_update_date: string
+  status_color: 'green' | 'red' | 'yellow' | 'gray'
+  change_color: 'green' | 'red' | 'blue' | 'gray'
+}
+
+interface AIInsight {
+  insight_title: string
+  insight_description: string
+  confidence_score: number
+  impact_score: number
+  priority_display: 'HIGH PRIORITY' | 'MEDIUM PRIORITY' | 'LOW PRIORITY'
+  confidence_display: string // e.g., "89% confidence"
+  priority_color: 'red' | 'orange' | 'blue'
+  recommended_actions: string // JSON string array that needs parsing
+}
+
+// Hook return types
+interface UseDashboardMetricsReturn {
+  metrics: DashboardMetric[] | null
+  isLoading: boolean
+  error: Error | null
+  refresh: () => Promise<void>
+}
+
+interface UseAIInsightsReturn {
+  insights: AIInsight[] | null
+  isLoading: boolean
+  error: Error | null
+  acknowledgeInsight: (insightTitle: string) => Promise<void>
+}
+```
+
+## 3. Technical Requirements
+
+### Next.js Page
+- **Route Name**: okr-dashboard
+- **File Path**: app/workspace/okr-dashboard/page.tsx
+- **Description**: Server component for fetching initial OKR data and composing the dashboard UI
+
+### Components
+
+#### Component Name: MetricCard
+- **File Path**: components/ui/metric-card.tsx
+- **Description**: Individual metric card displaying KPI data with icon, value, change indicator, progress bar, and status
+- **Props**: Receives a single DashboardMetric object from Supabase
+
+#### Component Name: MetricCardGrid
+- **File Path**: components/ui/metric-card-grid.tsx
+- **Description**: Grid container for metric cards with responsive layout and loading states
+
+#### Component Name: AIInsightCard
+- **File Path**: components/ui/ai-insight-card.tsx
+- **Description**: Card component for displaying AI-generated insights with priority, confidence, and recommendations
+- **Props**: Receives a single AIInsight object from Supabase
+
+#### Component Name: AIInsightsPanel
+- **File Path**: components/ui/ai-insights-panel.tsx
+- **Description**: Container for AI insights with filtering and sorting capabilities
+
+#### Component Name: DashboardHeader
+- **File Path**: components/ui/dashboard-header.tsx
+- **Description**: Header component with title, subtitle, and refresh controls
+
+### Supabase Hooks
+
+#### Data Name: DashboardMetrics
+- **Hook Name**: useDashboardMetrics
+- **File Path**: hooks/use-dashboard-metrics.ts
+- **Description**: Fetches OKR metric cards data from v_dashboard_metric_cards_complete view with auto-refresh
+
+#### Data Name: AIInsights
+- **Hook Name**: useAIInsights
+- **File Path**: hooks/use-ai-insights.ts
+- **Description**: Fetches AI-powered insights from v_ai_insights_enriched view with priority sorting
+
+## 4. UX/UI Reference
+
+### UX Mockup URL
+https://claude.ai/public/artifacts/d197ff26-8b5b-46b2-886f-73b20780bba3
+
+### Responsive Design Requirements
+
+#### Desktop (1280px+):
+- 6-column grid for metric cards (each card takes 1 column)
+- AI insights panel displays 4 cards in a 2x2 grid
+- Full sidebar navigation visible
+- Detailed metric information with all data points
+
+#### Tablet / iPad (768px - 1279px):
+- 3-column grid for metric cards (2 cards per row)
+- AI insights panel displays 2 cards per row
+- Collapsible sidebar navigation
+- Condensed metric information with primary values
+
+#### Mobile (below 768px):
+- Single column layout for all cards
+- Stacked metric cards with horizontal scroll option
+- AI insights displayed as expandable accordion
+- Bottom navigation bar replaces sidebar
+- Simplified metric display with essential data only
+
+### Key UI Elements
+
+#### Header
+- Title "OKR Performance Dashboard"
+- Subtitle "Real-time tracking of key objectives and results across all business units"
+
+#### MetricCard UI Layout
+```
+┌─────────────────────────────────────┐
+│ ████████████████████                │ <- Status color bar (4px height)
+│                                      │
+│ [Icon] Card Title        [STATUS]   │ <- Icon (24x24), Title (16px bold), Badge
+│                                      │
+│ $85.4K               Target: $280K  │ <- Main value (36px bold), Target (14px gray)
+│                                      │
+│ ▓▓▓▓▓░░░░░░░░░░░    Target Progress │ <- Progress bar (8px), Label (12px)
+│ 30.5% Complete                       │ <- Progress text (12px gray)
+│                                      │
+│ ↓ 9% (-$8.4K)     [Analyze] [Alert] │ <- Change indicator, Action buttons
+│ Website/E-commerce                   │ <- Platform name (12px gray)
+└─────────────────────────────────────┘
+```
+
+#### AIInsightCard UI Layout
+```
+┌─────────────────────────────────────┐
+│ [HIGH PRIORITY]     [89% confidence]│ <- Priority badge (colored), Confidence badge
+│                                      │
+│ Insight Title                       │ <- Title (16px bold)
+│ Detailed description of the insight  │ <- Description (14px gray)
+│                                      │
+│ Impact: ████████░░ 8/10            │ <- Impact bar visualization
+│                                      │
+│ Recommended Actions:                │ <- Section header (12px bold)
+│ • Action item one                   │ <- Parsed from JSON array
+│ • Action item two                   │
+└─────────────────────────────────────┘
+```
+
+#### Color Coding
+- Green (on track), Yellow (behind), Red (at risk), Gray (no data)
+- Auto-refresh indicator with countdown timer
+
+### Color System
+```typescript
+const statusColors = {
+  'On Track': '#10B981',  // Green
+  'At Risk': '#EF4444',   // Red
+  'Behind': '#F59E0B',    // Yellow
+  'No Data': '#9CA3AF'    // Gray
+}
+
+const changeColors = {
+  up: '#10B981',   // Green
+  down: '#EF4444', // Red
+  stable: '#3B82F6' // Blue
+}
+```
+
+### Icon Mapping
+```typescript
+const iconMapping = {
+  revenue: '💵',        // Dollar sign in blue circle
+  instagram: '📷',      // Instagram logo in gradient
+  tiktok: '🎵',        // TikTok logo in black
+  customers: '👥',      // Users icon in blue
+  orders: '🛍️',        // Shopping bag in purple
+  repeat_purchase: '🔄' // Refresh icon in green
+}
+```
+
+### Responsive Breakpoints
+- Mobile: < 768px (single column)
+- Tablet: 768px - 1279px (2 columns)
+- Desktop: ≥ 1280px (3 columns)
+
+## 5. Database Interaction
+
+### Database View 1: Dashboard Metrics
+- **Supabase View/Table Name**: v_dashboard_metric_cards_complete
+- **SQL Script Name**: dashboard_metrics_view.sql
+- **Description**: Comprehensive view aggregating OKR objectives with performance metrics and status indicators
+
+#### SQL View Definition:
+```sql
+create view public.v_dashboard_metric_cards_complete as
+select
+  vdc.id as okr_id,
+  o.tenant_id,
+  o.brand_id,
+  vdc.title as card_title,
+  vdc.display_value as main_value,
+  vdc.daily_change_percentage,
+  vdc.daily_change_absolute,
+  vdc.change_direction,
+  vdc.metric_category_icon as icon_type,
+  vdc.status as card_status,
+  vdc.target_value,
+  vdc.current_value,
+  vdc.progress_percentage,
+  vdc.platform_name,
+  vdc.metric_description,
+  vdc.metric_unit,
+  vop.last_update_date,
+  case vdc.status
+    when 'On Track'::text then 'green'::text
+    when 'Behind'::text then 'yellow'::text
+    when 'At Risk'::text then 'red'::text
+    when 'No Data'::text then 'gray'::text
+    else 'gray'::text
+  end as status_color,
+  case vdc.change_direction
+    when 'up'::text then 'green'::text
+    when 'down'::text then 'red'::text
+    when 'stable'::text then 'blue'::text
+    else 'gray'::text
+  end as change_color
+from
+  v_okr_dashboard_complete vdc
+  join okr_objectives o on vdc.id = o.id
+  join v_okr_performance vop on vdc.id = vop.id
+where
+  o.is_active = true
+order by
+  (
+    case vdc.status
+      when 'At Risk'::text then 1
+      when 'Behind'::text then 2
+      when 'No Data'::text then 3
+      when 'On Track'::text then 4
+      else 5
+    end
+  ),
+  (
+    case vdc.metric_category_icon
+      when 'revenue'::text then 1
+      when 'customers'::text then 2
+      when 'orders'::text then 3
+      when 'engagement'::text then 4
+      when 'growth'::text then 5
+      else 6
+    end
+  ),
+  vdc.progress_percentage;
+```
+
+#### Data Schema:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| okr_id | string | Unique identifier for the OKR |
+| tenant_id | string | Tenant identifier |
+| brand_id | string | Brand identifier |
+| card_title | string | Display title for the metric card |
+| main_value | string | Primary metric value to display |
+| daily_change_percentage | float | Percentage change from previous day |
+| daily_change_absolute | float | Absolute change from previous day |
+| change_direction | string | Direction of change (up/down/stable) |
+| icon_type | string | Icon category for visual representation |
+| card_status | string | Current status of the metric |
+| target_value | float | Target value for the metric |
+| current_value | float | Current actual value |
+| progress_percentage | float | Progress towards target (%) |
+| platform_name | string | Associated platform name |
+| metric_description | string | Detailed description of the metric |
+| metric_unit | string | Unit of measurement |
+| last_update_date | string | Last data update timestamp |
+| status_color | string | Color code for status indicator |
+| change_color | string | Color code for change indicator |
+
+### Database View 2: AI Insights
+- **Supabase View/Table Name**: v_ai_insights_enriched
+- **SQL Script Name**: ai_insights_view.sql
+- **Description**: AI-generated insights with priority scoring and actionable recommendations
+
+#### SQL View Definition:
+```sql
+create view public.v_ai_insights_enriched as
+select
+  insight_title,
+  insight_description,
+  confidence_score,
+  impact_score,
+  case
+    when impact_score >= 8 then 'HIGH PRIORITY'::text
+    when impact_score >= 6 then 'MEDIUM PRIORITY'::text
+    else 'LOW PRIORITY'::text
+  end as priority_display,
+  concat(
+    round(confidence_score * 100::numeric),
+    '% confidence'
+  ) as confidence_display,
+  case
+    when impact_score >= 8 then 'red'::text
+    when impact_score >= 6 then 'orange'::text
+    else 'blue'::text
+  end as priority_color,
+  recommended_actions
+from
+  ai_insights
+where
+  is_acknowledged = false
+  and (
+    expires_at > now()
+    or expires_at is null
+  )
+order by
+  impact_score desc,
+  confidence_score desc;
+```
+
+#### Data Schema:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| insight_title | string | Title of the insight |
+| insight_description | string | Detailed description of the insight |
+| confidence_score | float | AI confidence in the insight (0-1) |
+| impact_score | integer | Potential impact rating (1-10) |
+| priority_display | string | Human-readable priority label |
+| confidence_display | string | Formatted confidence percentage |
+| priority_color | string | Color code for priority indicator |
+| recommended_actions | string | JSON array of recommended actions |
+
+## 6. Implementation Details
+
+### page.tsx (app/workspace/okr-dashboard/page.tsx)
+```typescript
+import { createClient } from '@boastitup/supabase/server'
+import { MetricCardGrid } from '@/components/ui/metric-card-grid'
+import { AIInsightsPanel } from '@/components/ui/ai-insights-panel'
+import { DashboardHeader } from '@/components/ui/dashboard-header'
+
+export default async function OKRDashboardPage() {
+  const supabase = createClient()
+  
+  // Fetch initial data server-side
+  const [metricsResponse, insightsResponse] = await Promise.all([
+    supabase.from('v_dashboard_metric_cards_complete').select('*'),
+    supabase.from('v_ai_insights_enriched').select('*')
+  ])
+  
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <DashboardHeader />
+      <MetricCardGrid 
+        initialData={metricsResponse.data} 
+        error={metricsResponse.error}
+      />
+      <AIInsightsPanel 
+        initialData={insightsResponse.data}
+        error={insightsResponse.error}
+      />
+    </div>
+  )
+}
+```
+
+### Component Architecture
+
+#### MetricCard Component
+- **File**: components/ui/metric-card.tsx
+- **Props**: Receives a single DashboardMetric object from Supabase
+- **Functionality**:
+  - Client component with 'use client' directive
+  - Renders metric data with appropriate icon based on icon_type
+  - Displays change indicators with color coding
+  - Shows progress bars with actual progress_percentage
+  - Shows loading skeleton when data is fetching
+  - Handles click events for detailed view navigation
+
+#### MetricCardGrid Component
+- **File**: components/ui/metric-card-grid.tsx
+- **Functionality**:
+  - Client component with 'use client'
+  - Uses useDashboardMetrics hook
+  - Maps over metrics array to render MetricCard components
+  - Grid layout: grid-cols-1 md:grid-cols-2 lg:grid-cols-3
+  - Shows 6 skeleton cards during loading
+
+#### AIInsightCard Component
+- **File**: components/ui/ai-insight-card.tsx
+- **Props**: Receives a single AIInsight object from Supabase
+- **Functionality**:
+  - Displays priority badges with appropriate colors
+  - Shows confidence percentage
+  - Renders impact score visualization
+  - Parses and displays recommended actions from JSON
+
+#### AIInsightsPanel Component
+- **File**: components/ui/ai-insights-panel.tsx
+- **Functionality**:
+  - Client component with 'use client'
+  - Uses useAIInsights hook
+  - Section header: "🤖 AI-Powered Insights"
+  - Grid layout: grid-cols-1 md:grid-cols-2
+  - Shows 4 skeleton cards during loading
+
+### Supabase Hooks Implementation
+
+#### useDashboardMetrics Hook
+- **File**: hooks/use-dashboard-metrics.ts
+- **Implementation Requirements**:
+  1. Create Supabase client using createClient from '@boastitup/supabase/client'
+  2. Query: from('v_dashboard_metric_cards_complete').select('*')
+  3. Implement 30-second interval refresh using useEffect
+  4. Return typed data as DashboardMetric[]
+  5. Handle loading and error states
+  6. No data transformation - use as-is from Supabase
+- **Return Value**:
+```typescript
+{
+  metrics: DashboardMetric[] | null
+  isLoading: boolean
+  error: Error | null
+  refresh: () => Promise<void>
+}
+```
+
+#### useAIInsights Hook
+- **File**: hooks/use-ai-insights.ts
+- **Implementation Requirements**:
+  1. Create Supabase client
+  2. Query: from('v_ai_insights_enriched').select('*')
+  3. Parse recommended_actions from JSON string to array
+  4. Return typed data as AIInsight[]
+  5. Implement acknowledgeInsight function that updates ai_insights table
+  6. Auto-refresh when insight is acknowledged
+- **Return Value**:
+```typescript
+{
+  insights: AIInsight[] | null
+  isLoading: boolean
+  error: Error | null
+  acknowledgeInsight: (insightTitle: string) => Promise<void>
+}
+```
+
+### Supabase Query Examples
+```typescript
+// Fetch metrics
+const { data, error } = await supabase
+  .from('v_dashboard_metric_cards_complete')
+  .select('*')
+
+// Fetch insights
+const { data, error } = await supabase
+  .from('v_ai_insights_enriched')
+  .select('*')
+```
+
+## 7. Error Handling & Edge Cases
+
+### On Data Fetching Error
+Display a user-friendly error card with:
+- Icon indicating error state
+- Message: "Unable to load dashboard data"
+- Retry button to manually refresh
+- Technical error details in collapsible section for debugging
+
+### Loading States
+Display skeleton loaders that match the final UI layout:
+- MetricCard skeleton: 320px width, 200px height
+- AIInsightCard skeleton: 400px width, 180px height
+- Shimmer effect animation from left to right
+- Maintain layout structure to prevent content shift
+
+### On No Data
+
+#### For Metrics:
+- Display message: "No active OKRs found"
+- Show call-to-action button: "Create your first OKR"
+- Link to OKR creation page
+
+#### For AI Insights:
+- Display message: "All insights have been reviewed"
+- Show subtitle: "New insights will appear here as they're generated"
+- Display refresh button to check for new insights
+
+### Additional Edge Cases
+- **Partial Data Failure**: If one view fails but another succeeds, show available data with error notification for failed section
+- **Stale Data Warning**: If last_update_date is older than 24 hours, show warning badge
+- **Network Connectivity**: Implement offline detection with appropriate messaging
+- **Permission Errors**: Handle 403 errors with "Access Denied" message and contact support link
+
+### Error Display Interface
+```typescript
+interface ErrorDisplay {
+  icon: '⚠️'
+  title: 'Unable to load data'
+  message: string // Error message from Supabase
+  action: 'Retry' // Button to refresh data
+}
+```
+
+## 8. Key Implementation Details
+
+### Data Flow
+1. Server component fetches initial data
+2. Client components use hooks for real-time updates
+3. Never hardcode any metric values or insights
+4. All data comes from Supabase views
+
+### Component Creation Order
+1. Start with TypeScript interfaces
+2. Create hooks first (they provide the data)
+3. Build individual card components
+4. Assemble grid/panel containers
+5. Integrate into page component
+
+### Formatting Guidelines
+- **Format numbers**: Use Intl.NumberFormat for currency/numbers
+- **Parse JSON**: JSON.parse(recommended_actions) for action arrays
+- **Progress bars**: Width = `${progress_percentage}%`
+- **Change arrows**: Use Unicode ↑ (U+2191) and ↓ (U+2193)
+- **Status badges**: Use uppercase text with colored background
+- **Action buttons**: Outline style with hover states
+
+## 9. Performance Considerations
+- Implement virtual scrolling for large datasets (>50 metrics)
+- Use React.memo for MetricCard components to prevent unnecessary re-renders
+- Implement debounced search/filter for AI insights
+- Lazy load icons using dynamic imports
+- Cache dashboard data in sessionStorage for quick navigation returns
+- Use Suspense boundaries for progressive loading
+
+## 10. Testing Requirements
+
+### Unit Tests
+- Test data transformation functions
+- Test hook error handling
+- Test component rendering with various data states
+
+### Integration Tests
+- Test Supabase connection and data fetching
+- Test auto-refresh functionality
+- Test responsive breakpoints
+
+### E2E Tests
+- Test complete user flow from login to dashboard
+- Test metric card interactions
+- Test AI insight acknowledgment flow
+
+### Testing Checklist
+- [ ] All data loads from Supabase (no hardcoded values)
+- [ ] Progress bars reflect actual progress_percentage
+- [ ] Status colors match card_status values
+- [ ] Change indicators show correct arrows and colors
+- [ ] AI insights display in priority order
+- [ ] Manual refresh functionality works
+- [ ] Responsive layouts work at all breakpoints
+- [ ] Error states show when Supabase queries fail
+- [ ] Loading skeletons appear during data fetch
+- [ ] Data refreshes on refresh button click
+- [ ] Metric cards display with progress bars, status indicators, and action buttons
+- [ ] AI insights are sorted by priority with actionable recommendations

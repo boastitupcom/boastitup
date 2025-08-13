@@ -56,3 +56,37 @@ export const useAIInsights = (brandId?: string) => {
     enabled: !!brandId,
   });
 };
+
+// NEW: Enhanced hooks for the updated v_okr_performance view
+export const useOKRPerformance = (params?: {
+  brandId?: string;
+  okrId?: string;
+  title?: string;
+}) => {
+  return useQuery({
+    queryKey: ['okrPerformance', params],
+    queryFn: () => OKRService.fetchOKRPerformance(params),
+    staleTime: STALE_TIME_MINUTES,
+    enabled: !!(params?.brandId || params?.okrId || params?.title),
+  });
+};
+
+// Search OKRs by title
+export const useOKRSearch = (title: string, brandId?: string) => {
+  return useQuery({
+    queryKey: ['okrSearch', title, brandId],
+    queryFn: () => OKRService.fetchOKRPerformance({ title, brandId }),
+    staleTime: STALE_TIME_MINUTES,
+    enabled: !!title && title.length > 2, // Only search with 3+ characters
+  });
+};
+
+// Get specific OKR by ID
+export const useOKRById = (okrId?: string) => {
+  return useQuery({
+    queryKey: ['okrById', okrId],
+    queryFn: () => OKRService.fetchOKRPerformance({ okrId }),
+    staleTime: STALE_TIME_MINUTES,
+    enabled: !!okrId,
+  });
+};

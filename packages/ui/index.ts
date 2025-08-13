@@ -12,3 +12,8 @@ export * from "./src/components/ui/toast";
 export * from "./src/components/ui/separator";
 export * from "./src/components/ui/dialog";
 export * from "./src/components/ui/tabs";
+export * from "./src/components/ui/metric-card";
+export * from "./src/components/ui/metric-card-grid";
+export * from "./src/components/ui/ai-insight-card";
+export * from "./src/components/ui/ai-insights-panel";
+export * from "./src/components/ui/dashboard-header";

@@ -213,7 +213,7 @@ export function AIInsights({ brandId, className = '' }: AIInsightsProps) {
                             className={`text-xs ${getPriorityColor(insight.priority)}`}
                             variant="outline"
                           >
-                            {insight.priority.toUpperCase()}
+                            {(insight.priority || 'medium').toUpperCase()}
                           </Badge>
                           <div className="text-xs text-gray-500">
                             {insight.confidence_score}% confidence

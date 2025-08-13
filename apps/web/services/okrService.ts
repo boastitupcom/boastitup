@@ -2,63 +2,87 @@ import { createClient } from '@boastitup/supabase/client';
 
 const BRAND_ID = '4743e593-3f09-4eba-96b4-c4c1413bca47'; // Default brand ID
 
+// Helper function to determine status priority for deduplication
+function getStatusPriority(status: string): number {
+  switch (status?.toLowerCase()) {
+    case 'completed':
+    case 'target achieved': return 4;
+    case 'on track': return 3;
+    case 'behind': return 2;
+    case 'at risk': return 1;
+    case 'not started': return 0;
+    default: return 0;
+  }
+}
+
 export const OKRService = {
-  // 1. Get all OKRs for a brand with current performance
-  fetchCurrentPerformanceOKRs: async (brandId: string = BRAND_ID) => {
+  // 1. Get OKR performance data with optional filtering (NEW)
+  fetchOKRPerformance: async (params?: { 
+    brandId?: string;
+    okrId?: string; 
+    title?: string;
+  }) => {
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from('v_okr_current_performance')
-      .select('*')
-      .eq('brand_id', brandId)
-      .order('is_primary', { ascending: false })
-      .order('okr_category');
+    const { brandId = BRAND_ID, okrId, title } = params || {};
+    
+    let query = supabase
+      .from('v_okr_performance')
+      .select('title, current_value, target_value, progress_percentage, status, platform_name, metric_unit, health, id, brand_id')
+      .eq('brand_id', brandId);
+
+    // Apply filters based on parameters
+    if (okrId) {
+      query = query.eq('id', okrId);
+    } else if (title) {
+      query = query.ilike('title', `%${title}%`); // case-insensitive partial match
+    }
+
+    // Order by status first, then progress_percentage
+    query = query
+      .order('status', { ascending: true })
+      .order('progress_percentage', { ascending: true });
+
+    const { data, error } = await query;
     
     if (error) throw error;
     
-    // Smart deduplication - use objective_name as key since you have duplicate OKR IDs
+    // Smart deduplication - use title as key
     if (data) {
       const okrMap = new Map();
       
       data.forEach(record => {
-        const key = record.objective_name; // Use objective name instead of ID
+        const key = record.title; // Use title instead of objective_name
         const existing = okrMap.get(key);
         
         if (!existing) {
-          // First record for this objective
+          // First record for this title
           okrMap.set(key, record);
         } else {
-          // Prefer primary metrics first
-          if (record.is_primary && !existing.is_primary) {
+          // Prefer records with better status or higher progress
+          const currentStatusPriority = getStatusPriority(record.status);
+          const existingStatusPriority = getStatusPriority(existing.status);
+          
+          if (currentStatusPriority > existingStatusPriority) {
             okrMap.set(key, record);
-          } 
-          // If both are primary or both are not, prefer higher weighted metrics
-          else if (record.is_primary === existing.is_primary) {
-            if (record.metric_weight > existing.metric_weight) {
-              okrMap.set(key, record);
-            }
-            // If weights are equal, prefer more recent data
-            else if (record.metric_weight === existing.metric_weight && 
-                     new Date(record.last_updated_date) > new Date(existing.last_updated_date)) {
-              okrMap.set(key, record);
-            }
+          } else if (currentStatusPriority === existingStatusPriority && 
+                     record.progress_percentage > existing.progress_percentage) {
+            okrMap.set(key, record);
           }
         }
       });
       
       const uniqueOKRs = Array.from(okrMap.values());
-      console.log(`🔧 Smart Deduplicated OKRs: ${data.length} -> ${uniqueOKRs.length}`);
-      console.log(`📊 Deduplication details:`, {
-        originalCount: data.length,
-        uniqueCount: uniqueOKRs.length,
-        primaryMetrics: uniqueOKRs.filter(okr => okr.is_primary).length,
-        uniqueObjectives: [...new Set(data.map(d => d.objective_name))].length,
-        duplicateOKRIds: data.length > uniqueOKRs.length ? 'Yes - using objective_name for dedup' : 'No'
-      });
+      console.log(`🔧 New v_okr_performance - Deduplicated: ${data.length} -> ${uniqueOKRs.length}`);
       
       return uniqueOKRs;
     }
     
     return data;
+  },
+
+  // Backward compatibility - use new method
+  fetchCurrentPerformanceOKRs: async (brandId: string = BRAND_ID) => {
+    return OKRService.fetchOKRPerformance({ brandId });
   },
 
   // 2. Get OKR progress summary for executive review
@@ -104,11 +128,10 @@ export const OKRService = {
   fetchAttentionMetrics: async (brandId: string = BRAND_ID) => {
     const supabase = createClient();
     const { data, error } = await supabase
-      .from('v_okr_current_performance')
-      .select('objective_name, metric_name, current_value, metric_target_value, progress_percentage, performance_status, platform_name, okr_id, is_primary, metric_weight, last_updated_date')
+      .from('v_okr_performance')
+      .select('title, current_value, target_value, progress_percentage, status, platform_name, metric_unit, health, id')
       .eq('brand_id', brandId)
-      .in('performance_status', ['Behind', 'At Risk'])
-      .eq('is_primary', true)
+      .in('status', ['Behind', 'At Risk'])
       .order('progress_percentage', { ascending: true });
     
     if (error) throw error;
@@ -118,22 +141,21 @@ export const OKRService = {
       const okrMap = new Map();
       
       data.forEach(record => {
-        const key = record.objective_name;
+        const key = record.title; // Use title instead of objective_name
         const existing = okrMap.get(key);
         
         if (!existing) {
           okrMap.set(key, record);
         } else {
-          // Prefer primary metrics, higher weight, more recent data
-          if (record.is_primary && !existing.is_primary) {
-            okrMap.set(key, record);
-          } else if (record.is_primary === existing.is_primary) {
-            if (record.metric_weight > existing.metric_weight) {
-              okrMap.set(key, record);
-            } else if (record.metric_weight === existing.metric_weight && 
-                       new Date(record.last_updated_date) > new Date(existing.last_updated_date)) {
-              okrMap.set(key, record);
-            }
+          // Prefer records with worse status (more urgent) or lower progress
+          const currentStatusPriority = getStatusPriority(record.status);
+          const existingStatusPriority = getStatusPriority(existing.status);
+          
+          if (currentStatusPriority < existingStatusPriority) {
+            okrMap.set(key, record); // Lower priority = worse status = more urgent
+          } else if (currentStatusPriority === existingStatusPriority && 
+                     record.progress_percentage < existing.progress_percentage) {
+            okrMap.set(key, record); // Lower progress = more urgent
           }
         }
       });

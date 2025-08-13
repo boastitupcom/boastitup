@@ -7,11 +7,16 @@ import { calculateOKRStatus } from '../../utils/okrCalculations';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface OKRMetric {
-  objective_name: string;
-  metric_name: string;
+  // New field names from v_okr_performance
+  title?: string;
+  status?: string;
+  target_value?: number;
+  // Backward compatibility
+  objective_name?: string;
+  metric_name?: string;
   current_value: number;
-  metric_target_value: number;
-  performance_status: string;
+  metric_target_value?: number;
+  performance_status?: string;
   okr_category?: string;
   platform_name?: string;
   time_progress_percent?: number;
@@ -23,7 +28,7 @@ interface MetricsTableProps {
   className?: string;
 }
 
-type SortField = 'objective_name' | 'progress' | 'current_value' | 'metric_target_value';
+type SortField = 'title' | 'objective_name' | 'progress' | 'current_value' | 'target_value' | 'metric_target_value';
 type SortDirection = 'asc' | 'desc' | null;
 
 export function MetricsTable({ metrics, onMetricClick, className = '' }: MetricsTableProps) {
@@ -54,9 +59,10 @@ export function MetricsTable({ metrics, onMetricClick, className = '' }: Metrics
       let bValue: any;
 
       switch (sortField) {
+        case 'title':
         case 'objective_name':
-          aValue = a.objective_name.toLowerCase();
-          bValue = b.objective_name.toLowerCase();
+          aValue = (a.title || a.objective_name || '').toLowerCase();
+          bValue = (b.title || b.objective_name || '').toLowerCase();
           break;
         case 'progress':
           aValue = calculateOKRStatus(a).progress_percentage;
@@ -66,9 +72,10 @@ export function MetricsTable({ metrics, onMetricClick, className = '' }: Metrics
           aValue = a.current_value;
           bValue = b.current_value;
           break;
+        case 'target_value':
         case 'metric_target_value':
-          aValue = a.metric_target_value;
-          bValue = b.metric_target_value;
+          aValue = a.target_value || a.metric_target_value;
+          bValue = b.target_value || b.metric_target_value;
           break;
         default:
           return 0;
@@ -125,14 +132,14 @@ export function MetricsTable({ metrics, onMetricClick, className = '' }: Metrics
             <thead>
               <tr className="border-b">
                 <th className="text-left py-3 px-4">
-                  <SortButton field="objective_name">Objective</SortButton>
+                  <SortButton field="title">Objective</SortButton>
                 </th>
                 <th className="text-left py-3 px-4">Metric</th>
                 <th className="text-right py-3 px-4">
                   <SortButton field="current_value">Current</SortButton>
                 </th>
                 <th className="text-right py-3 px-4">
-                  <SortButton field="metric_target_value">Target</SortButton>
+                  <SortButton field="target_value">Target</SortButton>
                 </th>
                 <th className="text-center py-3 px-4">
                   <SortButton field="progress">Progress</SortButton>
@@ -153,7 +160,7 @@ export function MetricsTable({ metrics, onMetricClick, className = '' }: Metrics
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium text-sm text-gray-900 truncate max-w-48">
-                          {metric.objective_name}
+                          {metric.title || metric.objective_name}
                         </div>
                         {metric.okr_category && (
                           <Badge variant="secondary" className="text-xs mt-1">
@@ -176,7 +183,7 @@ export function MetricsTable({ metrics, onMetricClick, className = '' }: Metrics
                       {metric.current_value?.toLocaleString() ?? 'N/A'}
                     </td>
                     <td className="py-3 px-4 text-right font-medium text-sm">
-                      {metric.metric_target_value?.toLocaleString() ?? 'N/A'}
+                      {(metric.target_value || metric.metric_target_value)?.toLocaleString() ?? 'N/A'}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center">

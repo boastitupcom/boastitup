@@ -27,7 +27,7 @@ export function OKRCard({ okr, onClick, className = '' }: OKRCardProps) {
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-gray-900 truncate">
-              {okr.objective_name}
+              {okr.title || okr.objective_name}
             </h3>
             <p className="text-xs text-gray-600 mt-1">
               {okr.metric_name}
@@ -56,7 +56,7 @@ export function OKRCard({ okr, onClick, className = '' }: OKRCardProps) {
               <div className="flex flex-col text-sm">
                 <span className="text-gray-500">Target</span>
                 <span className="font-semibold text-gray-900">
-                  {okr.metric_target_value?.toLocaleString() ?? 'N/A'}
+                  {(okr.target_value || okr.metric_target_value)?.toLocaleString() ?? 'N/A'}
                 </span>
               </div>
             </div>

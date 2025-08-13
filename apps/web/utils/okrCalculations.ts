@@ -1,8 +1,12 @@
 export interface OKRData {
   current_value: number | null;
-  metric_target_value: number | null;
+  // New field names from v_okr_performance
+  target_value?: number | null;
+  status?: string;
+  // Backward compatibility
+  metric_target_value?: number | null;
   time_progress_percent?: number;
-  performance_status: string;
+  performance_status?: string;
 }
 
 export interface OKRStatus {
@@ -12,7 +16,9 @@ export interface OKRStatus {
 }
 
 export const calculateOKRStatus = (okr: OKRData): OKRStatus => {
-  const { current_value, metric_target_value, time_progress_percent, performance_status: initialStatus } = okr;
+  const { current_value, time_progress_percent } = okr;
+  const metric_target_value = okr.target_value || okr.metric_target_value;
+  const initialStatus = okr.status || okr.performance_status;
 
   if (initialStatus === "Target Achieved" || initialStatus === "Completed") {
     return {
