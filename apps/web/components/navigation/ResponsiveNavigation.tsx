@@ -1,3 +1,4 @@
+// apps/web/components/navigation/ResponsiveNavigation.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -318,32 +319,42 @@ export function ResponsiveSidebar() {
     const active = isActive(item.href);
     const Icon = item.icon;
 
+    // For collapsed state, only show top-level items and simplify rendering
+    if (!isExpanded && level > 0) {
+      return null;
+    }
+
     const navContent = (
       <div
         className={`
-          flex items-center justify-between p-3 rounded-xl cursor-pointer
+          flex items-center justify-between rounded-xl cursor-pointer
           transition-all duration-200 group relative
           ${active 
             ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 font-medium shadow-sm border border-blue-100' 
             : 'hover:bg-gray-50 text-gray-700 hover:shadow-sm'
           }
-          ${level === 0 ? 'mb-1' : 'mb-0.5'}
-          ${!isExpanded && level === 0 ? 'justify-center' : ''}
+          ${!isExpanded && level === 0 
+            ? 'p-3 mb-2 justify-center' 
+            : 'p-3 mb-1'
+          }
         `}
         onClick={() => handleNavClick(item.href, item.label, hasChildren)}
+        title={!isExpanded ? item.label : undefined}
       >
-        <div className="flex items-center flex-1 min-w-0">
-          <div className={`flex-shrink-0 ${!isExpanded && level === 0 ? 'mx-auto' : ''}`}>
-            <Icon className={`
-              ${isExpanded ? 'w-5 h-5' : 'w-6 h-6'} 
-              transition-all duration-200 
-              ${item.color || 'text-gray-500'}
-              ${active ? 'text-blue-600' : ''}
-            `} />
-          </div>
-          
-          {isExpanded && (
-            <div className="flex-1 ml-3 min-w-0">
+        {/* Icon - Always visible */}
+        <div className={`flex-shrink-0 ${!isExpanded && level === 0 ? 'mx-auto' : ''}`}>
+          <Icon className={`
+            ${isExpanded ? 'w-5 h-5' : 'w-6 h-6'} 
+            transition-all duration-200 
+            ${item.color || 'text-gray-500'}
+            ${active ? 'text-blue-600' : ''}
+          `} />
+        </div>
+        
+        {/* Text content - Only show when expanded */}
+        {isExpanded && (
+          <div className="flex items-center justify-between flex-1 ml-3 min-w-0">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-sm ${level === 0 ? 'font-semibold' : 'font-medium'} truncate`}>
                   {item.label}
@@ -365,15 +376,16 @@ export function ResponsiveSidebar() {
                 </p>
               )}
             </div>
-          )}
-        </div>
-        
-        {hasChildren && isExpanded && (
-          <div className="ml-2 flex-shrink-0">
-            {isItemExpanded ? 
-              <ChevronDown className="w-4 h-4 text-gray-400" /> : 
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            }
+            
+            {/* Chevron for expandable items */}
+            {hasChildren && (
+              <div className="ml-2 flex-shrink-0">
+                {isItemExpanded ? 
+                  <ChevronDown className="w-4 h-4 text-gray-400" /> : 
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                }
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -391,6 +403,7 @@ export function ResponsiveSidebar() {
           </Link>
         )}
         
+        {/* Children - Only show when expanded and item is expanded */}
         {hasChildren && isItemExpanded && isExpanded && (
           <div className="mt-2 space-y-1">
             {item.children!.map(child => renderNavItem(child, level + 1))}
@@ -432,7 +445,9 @@ export function ResponsiveSidebar() {
         `}
       >
         {/* Header */}
-        <div className={`border-b border-gray-200 ${isExpanded ? 'p-6' : 'p-4'} transition-all duration-300`}>
+        <div className={`border-b border-gray-200 transition-all duration-300 ${
+          isExpanded ? 'p-6' : 'p-2'
+        }`}>
           {isExpanded ? (
             <div className="flex items-center justify-between">
               <div>
@@ -451,15 +466,15 @@ export function ResponsiveSidebar() {
               )}
             </div>
           ) : (
-            <div className="flex justify-center">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Home className="w-5 h-5 text-white" />
+            <div className="flex justify-center py-2">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <Home className="w-6 h-6 text-white" />
               </div>
             </div>
           )}
         </div>
         
-        {/* Toggle Button - Only show on tablet */}
+        {/* Toggle Button - Only show on desktop/tablet */}
         {!isMobile && (
           <div className="absolute -right-3 top-20 z-10">
             <button
@@ -476,11 +491,13 @@ export function ResponsiveSidebar() {
         )}
         
         {/* Navigation */}
-        <nav className={`flex-1 overflow-y-auto ${isExpanded ? 'p-4' : 'p-2'} transition-all duration-300 space-y-1`}>
+        <nav className={`flex-1 overflow-y-auto transition-all duration-300 space-y-1 ${
+          isExpanded ? 'p-4' : 'p-2'
+        }`}>
           {navigationItems.map(item => renderNavItem(item))}
         </nav>
         
-        {/* Footer */}
+        {/* Footer - Only show when expanded */}
         {isExpanded && (
           <div className="p-4 border-t border-gray-200">
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
