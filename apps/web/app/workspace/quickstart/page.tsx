@@ -1,4 +1,4 @@
-// apps/web/app/workspace/quick-start/page.tsx
+// apps/web/app/workspace/quickstart/page.tsx
 'use client';
 
 import React from 'react';
@@ -34,7 +34,7 @@ const quickStartCards: QuickStartCard[] = [
   {
     title: "Today's Focus",
     description: 'AI-prioritized tasks and insights tailored to your current business needs',
-    href: '/workspace/quick-start/today',
+    href: '/workspace/quickstart/today',
     icon: Target,
     color: 'text-orange-600',
     bgColor: 'from-orange-50 to-red-50',
@@ -45,7 +45,7 @@ const quickStartCards: QuickStartCard[] = [
   {
     title: 'Quick Wins',
     description: 'One-click optimizations that can boost your performance immediately',
-    href: '/workspace/quick-start/wins',
+    href: '/workspace/quickstart/wins',
     icon: CheckCircle,
     color: 'text-green-600',
     bgColor: 'from-green-50 to-emerald-50',
@@ -55,7 +55,7 @@ const quickStartCards: QuickStartCard[] = [
   {
     title: 'Performance Snapshot',
     description: 'Traffic light system overview of your key metrics and health indicators',
-    href: '/workspace/quick-start/snapshot',
+    href: '/workspace/quickstart/snapshot',
     icon: Activity,
     color: 'text-purple-600',
     bgColor: 'from-purple-50 to-violet-50',
@@ -64,7 +64,7 @@ const quickStartCards: QuickStartCard[] = [
   {
     title: 'Action Items',
     description: 'Clear next steps based on your data, not just raw analytics',
-    href: '/workspace/quick-start/actions',
+    href: '/workspace/quickstart/actions',
     icon: CheckCircle,
     color: 'text-indigo-600',
     bgColor: 'from-indigo-50 to-blue-50',
