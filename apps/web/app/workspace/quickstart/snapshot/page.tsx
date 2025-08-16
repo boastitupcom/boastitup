@@ -291,34 +291,7 @@ export default function PerformanceSnapshotPage() {
                     <div key={metric.id} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <metric.icon className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-500">{action.estimated}</span>
-                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Navigation */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-4 bg-white rounded-xl shadow-lg border border-gray-200 p-4">
-            <Link href="/workspace/quickstart/wins" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
-              <ArrowRight className="w-4 h-4 rotate-180" />
-              Back: Quick Wins
-            </Link>
-            <div className="w-px h-6 bg-gray-300" />
-            <Link href="/workspace/quickstart/actions" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors font-medium">
-              Next: Action Items
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}-gray-700">{metric.name}</span>
+                        <span className="text-sm text-gray-700">{metric.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-gray-900">{metric.value}</span>
@@ -453,14 +426,32 @@ export default function PerformanceSnapshotPage() {
                         {action.urgency} priority
                       </span>
                       <span className="text-sm text-gray-500">
-                        Estimated: {action.estimated}
-                        </span>
-                        <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                        {action.estimated}
+                      </span>
+                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
                     </div>
-                    </div>
-                    </div>
-                    </Link>
-                    ))}
-                </div>
-              </div>
+                  </div>
+                </Link>
+              ))}
             </div>
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="mt-8 text-center">
+          <div className="inline-flex items-center gap-4 bg-white rounded-xl shadow-lg border border-gray-200 p-4">
+            <Link href="/workspace/quickstart/wins" className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
+              <ArrowRight className="w-4 h-4 rotate-180" />
+              Back: Quick Wins
+            </Link>
+            <div className="w-px h-6 bg-gray-300" />
+            <Link href="/workspace/quickstart/actions" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 transition-colors font-medium">
+              Next: Action Items
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
