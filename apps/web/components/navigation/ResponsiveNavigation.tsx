@@ -63,14 +63,14 @@ interface NavigationItem {
 const navigationItems: NavigationItem[] = [
   {
     label: 'Quick Start',
-    href: '/workspace/quick-start',
+    href: '/workspace/quickstart',
     icon: Zap,
     description: 'Immediate value for time-pressed founders',
     color: 'text-blue-600',
     children: [
       {
         label: "Today's Focus",
-        href: '/workspace/quick-start/today',
+        href: '/workspace/quickstart/today',
         icon: Target,
         description: 'AI-prioritized tasks and insights',
         badge: '3 urgent',
@@ -78,7 +78,7 @@ const navigationItems: NavigationItem[] = [
       },
       {
         label: 'Quick Wins',
-        href: '/workspace/quick-start/wins',
+        href: '/workspace/quickstart/wins',
         icon: CheckCircle,
         description: 'One-click optimizations',
         status: 'new',
@@ -86,14 +86,14 @@ const navigationItems: NavigationItem[] = [
       },
       {
         label: 'Performance Snapshot',
-        href: '/workspace/quick-start/snapshot',
+        href: '/workspace/quickstart/snapshot',
         icon: Activity,
         description: 'Traffic light system overview',
         color: 'text-purple-600'
       },
       {
         label: 'Action Items',
-        href: '/workspace/quick-start/actions',
+        href: '/workspace/quickstart/actions',
         icon: CheckCircle,
         description: 'Clear next steps, not just data',
         color: 'text-indigo-600'
@@ -132,28 +132,28 @@ const navigationItems: NavigationItem[] = [
   },
   {
     label: 'Growth Tools',
-    href: '/workspace/growth-tools',
+    href: '/workspace/growthtools',
     icon: TrendingUp,
     description: 'Actionable growth levers',
     color: 'text-green-600',
     children: [
       {
         label: 'Publishing & Scheduling',
-        href: '/workspace/growth-tools/publishing',
+        href: '/workspace/growthtools/publishing',
         icon: Calendar,
         description: 'Smart calendar and bulk scheduler',
         color: 'text-blue-600'
       },
       {
         label: 'Engagement Hub',
-        href: '/workspace/growth-tools/engagement',
+        href: '/workspace/growthtools/engagement',
         icon: MessageSquare,
         description: 'Unified inbox and community management',
         color: 'text-purple-600'
       },
       {
         label: 'Performance Tracking',
-        href: '/workspace/growth-tools/performance',
+        href: '/workspace/growthtools/performance',
         icon: BarChart,
         description: 'Simple dashboard with competitor benchmarking',
         color: 'text-orange-600'
