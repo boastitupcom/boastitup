@@ -40,7 +40,12 @@ import {
   ArrowUp,
   Camera,
   Layout,
-  Archive
+  Archive,
+  LineChart,
+  PieChart,
+  Globe,
+  UserCheck,
+  TrendingDown
 } from 'lucide-react';
 
 // ChevronLeft icon component
@@ -132,36 +137,6 @@ const navigationItems: NavigationItem[] = [
     ]
   },
   {
-    label: 'Growth Tools',
-    href: '/workspace/growthtools',
-    icon: TrendingUp,
-    description: 'Actionable growth levers',
-    color: 'text-green-600',
-    children: [
-      {
-        label: 'Publishing & Scheduling',
-        href: '/workspace/growthtools/publishing',
-        icon: Calendar,
-        description: 'Smart calendar and bulk scheduler',
-        color: 'text-blue-600'
-      },
-      {
-        label: 'Engagement Hub',
-        href: '/workspace/growthtools/engagement',
-        icon: MessageSquare,
-        description: 'Unified inbox and community management',
-        color: 'text-purple-600'
-      },
-      {
-        label: 'Performance Tracking',
-        href: '/workspace/growthtools/performance',
-        icon: BarChart,
-        description: 'Simple dashboard with competitor benchmarking',
-        color: 'text-orange-600'
-      }
-    ]
-  },
-  {
     label: 'Content Studio',
     href: '/workspace/content-studio',
     icon: Edit,
@@ -219,6 +194,81 @@ const navigationItems: NavigationItem[] = [
         icon: Users,
         description: 'Micro-influencer discovery and outreach',
         color: 'text-purple-600'
+      }
+    ]
+  },
+  {
+    label: 'Organic Growth Analytics',
+    href: '/workspace/analytics',
+    icon: LineChart,
+    description: 'Comprehensive organic growth insights',
+    color: 'text-emerald-600',
+    status: 'new',
+    children: [
+      {
+        label: 'Analytics Dashboard',
+        href: '/workspace/analytics/dashboard',
+        icon: BarChart2,
+        description: 'Overview of all organic growth metrics',
+        color: 'text-blue-600'
+      },
+      {
+        label: 'SEO Performance',
+        href: '/workspace/analytics/seo-performance',
+        icon: Search,
+        description: 'Search rankings and organic traffic analysis',
+        color: 'text-green-600'
+      },
+      {
+        label: 'Content Analytics',
+        href: '/workspace/analytics/content-analytics',
+        icon: BarChart,
+        description: 'Content engagement and performance metrics',
+        color: 'text-purple-600'
+      },
+      {
+        label: 'Organic Social',
+        href: '/workspace/analytics/organic-social',
+        icon: Instagram,
+        description: 'Social media reach and engagement insights',
+        color: 'text-pink-600'
+      },
+      {
+        label: 'Community Growth',
+        href: '/workspace/analytics/community-growth',
+        icon: Users,
+        description: 'Audience growth and retention metrics',
+        color: 'text-orange-600'
+      }
+    ]
+  },
+  {
+    label: 'Growth Tools',
+    href: '/workspace/growthtools',
+    icon: TrendingUp,
+    description: 'Actionable growth levers',
+    color: 'text-green-600',
+    children: [
+      {
+        label: 'Publishing & Scheduling',
+        href: '/workspace/growthtools/publishing',
+        icon: Calendar,
+        description: 'Smart calendar and bulk scheduler',
+        color: 'text-blue-600'
+      },
+      {
+        label: 'Engagement Hub',
+        href: '/workspace/growthtools/engagement',
+        icon: MessageSquare,
+        description: 'Unified inbox and community management',
+        color: 'text-purple-600'
+      },
+      {
+        label: 'Performance Tracking',
+        href: '/workspace/growthtools/performance',
+        icon: BarChart,
+        description: 'Simple dashboard with competitor benchmarking',
+        color: 'text-orange-600'
       }
     ]
   },
