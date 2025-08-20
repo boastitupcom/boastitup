@@ -1,0 +1,418 @@
+# OKR Management System - Navigation Paths Guide
+
+## 🎯 MAIN OKR ROUTES
+
+### Overview & Entry Point
+```
+/workspace/okr
+```
+**Description**: Main OKR landing page with system overview
+**Features**: 
+- Quick stats display (total OKRs, active, completed)
+- Health score overview
+- Navigation to all OKR sections
+- Quick action buttons
+- Recent activity feed
+
+### Dashboard & Analytics
+```
+/workspace/okr/dashboard
+```
+**Description**: Comprehensive analytics and progress tracking dashboard
+**Features**:
+- Real-time OKR progress visualization
+- Performance metrics and KPIs
+- Interactive charts and graphs
+- Health score calculations
+- Trend analysis
+- Export functionality (CSV, PDF)
+- AI-powered insights and recommendations
+- Category and platform performance breakdown
+
+### OKR Creation Workflow
+```
+/workspace/okr/create
+```
+**Description**: Multi-step OKR creation process with AI assistance
+**Features**:
+- **Step 1**: Brand context collection (industry, products, keywords)
+- **Step 2**: AI-powered template suggestions
+- **Step 3**: Template customization and bulk editing
+- **Step 4**: Review and validation before creation
+- Real-time validation and duplicate detection
+- Bulk creation (up to 50 OKRs per operation)
+- Template origin tracking
+- Progress saving and restoration
+
+### OKR Management
+```
+/workspace/okr/manage
+```
+**Description**: Complete OKR lifecycle management interface
+**Features**:
+- Comprehensive OKR listing with filters
+- Bulk operations (activate, pause, archive, delete)
+- Status management (active, paused, completed, archived)
+- Priority adjustment (1-3 scale: High, Medium, Low)
+- Progress tracking and updates
+- Search and advanced filtering
+- Export and reporting
+- Team collaboration features
+
+### Individual OKR Editing
+```
+/workspace/okr/[id]/edit
+```
+**Description**: Detailed edit interface for specific OKRs
+**Features**:
+- Complete OKR data modification
+- Progress tracking with visual indicators
+- Target date adjustments
+- Platform and metric type changes
+- Priority and status updates
+- Change history tracking
+- Validation and conflict resolution
+- Auto-save functionality
+
+## 🔧 AI SERVICE ENDPOINTS
+
+### AI Suggestion Service
+```
+POST /api/okr-suggestions
+```
+**Description**: Generate AI-powered OKR recommendations
+**Payload**:
+```json
+{
+  "industry": "string",
+  "brandName": "string", 
+  "tenantId": "string",
+  "keyProduct": "string (optional)",
+  "productCategory": "string (optional)",
+  "keyCompetition": ["string array (optional)"],
+  "majorKeywords": ["string array (optional)"],
+  "objective": "string (optional)",
+  "historicalOKRs": ["string array (optional)"]
+}
+```
+
+### Health Check
+```
+GET /api/okr-suggestions/health
+```
+**Description**: Comprehensive service health monitoring
+**Response**: AI connectivity, memory usage, uptime, performance metrics
+
+### Performance Metrics
+```
+GET /api/okr-suggestions/metrics
+```
+**Description**: Service performance statistics and analytics
+**Response**: Success rates, latency, usage patterns, error breakdown
+
+## 📊 DATA API ENDPOINTS
+
+### OKR Data Retrieval
+```
+GET /api/okr?brandId={id}&tenantId={id}
+```
+**Description**: Fetch OKR performance data from materialized view
+**Features**: 
+- Brand and tenant scoped data
+- Real-time progress calculations
+- Joined dimensional data (dates, platforms, metrics)
+- Transformed client-ready format
+
+### OKR Creation/Updates
+```
+POST /api/okr
+```
+**Description**: Create or update OKR objectives
+**Features**:
+- Bulk operations support
+- Validation and constraint enforcement
+- Audit trail creation
+- Multi-tenant security
+
+## 🗂️ DIMENSIONAL DATA ROUTES
+
+### Industry Selection
+```
+/workspace/brand-context
+```
+**Description**: Industry and brand context configuration
+**Features**:
+- Industry catalog browsing
+- Brand profile setup
+- Product category selection
+- Competitive landscape mapping
+
+### Template Library
+```
+/workspace/okr/templates
+```
+**Description**: Browse and manage OKR templates by industry
+**Features**:
+- Industry-specific template filtering
+- Template preview and details
+- Custom template creation
+- Template performance analytics
+
+## 🎨 UI COMPONENT SHOWCASE
+
+### Design System Demo
+```
+/storybook
+```
+**Description**: Component library documentation and testing
+**Features**:
+- All UI components with variants
+- Interactive component playground
+- Accessibility testing
+- Design token documentation
+
+## 🔐 AUTHENTICATION & PERMISSIONS
+
+### Brand Context Routes (Multi-tenancy)
+```
+/workspace/brands
+```
+**Description**: Brand selection and switching interface
+**Features**:
+- Multi-brand access management
+- Tenant-scoped permissions
+- Role-based access control
+- Brand-specific settings
+
+### Permission-Gated Features
+```
+- canCreateOKRs: Access to /workspace/okr/create
+- canEditOKRs: Access to /workspace/okr/[id]/edit
+- canDeleteOKRs: Delete operations in bulk actions
+- canViewAnalytics: Access to /workspace/okr/dashboard
+```
+
+## 📋 ADVANCED FUNCTIONALITY PATHS
+
+### Bulk Operations Interface
+```
+/workspace/okr/manage?bulk=true
+```
+**Query Parameters**:
+- `status`: Filter by OKR status
+- `priority`: Filter by priority level
+- `platform`: Filter by platform
+- `category`: Filter by OKR category
+- `date_range`: Filter by target date range
+
+### Export & Reporting
+```
+/workspace/okr/reports
+```
+**Description**: Advanced reporting and data export
+**Features**:
+- Custom report generation
+- Scheduled exports
+- Multiple format support (CSV, PDF, Excel)
+- Email delivery options
+- Historical data analysis
+
+### Integration Webhooks
+```
+/api/webhooks/okr-updates
+```
+**Description**: Real-time OKR change notifications
+**Features**:
+- Third-party system integration
+- Slack/Teams notifications
+- Custom webhook endpoints
+- Event filtering and routing
+
+## 🔍 SEARCH & FILTERING
+
+### Global OKR Search
+```
+/workspace/okr/search?q={query}
+```
+**Query Parameters**:
+- `q`: Full-text search query
+- `type`: Search scope (title, description, both)
+- `status`: Filter by status
+- `created_by`: Filter by creator
+- `date_created`: Date range filter
+
+### Advanced Filter Interface
+```
+/workspace/okr/manage?filters=advanced
+```
+**Filter Options**:
+- Multi-select status filtering
+- Priority range selection
+- Platform and metric type combinations
+- Date range pickers
+- Progress percentage ranges
+- Template origin tracking
+
+## 📱 MOBILE-OPTIMIZED PATHS
+
+### Mobile Dashboard
+```
+/workspace/okr/mobile/dashboard
+```
+**Description**: Touch-optimized dashboard interface
+**Features**:
+- Swipe navigation
+- Condensed metrics display
+- Quick action buttons
+- Offline data caching
+
+### Mobile OKR Management
+```
+/workspace/okr/mobile/manage
+```
+**Description**: Mobile-friendly OKR management
+**Features**:
+- Touch-optimized bulk selection
+- Swipe-to-action gestures
+- Simplified editing interface
+- Voice-to-text input support
+
+## 🚀 DEVELOPMENT & TESTING
+
+### API Documentation
+```
+/api-docs
+```
+**Description**: Interactive API documentation
+**Features**:
+- OpenAPI/Swagger interface
+- Request/response examples
+- Authentication testing
+- Rate limiting information
+
+### Health Monitoring
+```
+/workspace/system/health
+```
+**Description**: System health dashboard
+**Features**:
+- Service status monitoring
+- Performance metrics
+- Error rate tracking
+- Database connection status
+
+## 📊 ANALYTICS & INSIGHTS
+
+### Performance Analytics
+```
+/workspace/okr/analytics/performance
+```
+**Description**: Deep-dive performance analytics
+**Features**:
+- Time-series analysis
+- Cohort analysis
+- Conversion funnel tracking
+- A/B testing results
+
+### User Behavior Analytics
+```
+/workspace/okr/analytics/behavior
+```
+**Description**: User interaction and behavior analysis
+**Features**:
+- Feature usage statistics
+- User journey mapping
+- Engagement metrics
+- Retention analysis
+
+## 🔧 ADMIN & CONFIGURATION
+
+### System Configuration
+```
+/workspace/admin/settings
+```
+**Description**: System-wide configuration panel
+**Features**:
+- Global OKR settings
+- Integration configurations
+- Security policy management
+- Performance tuning options
+
+### User Management
+```
+/workspace/admin/users
+```
+**Description**: User and permission management
+**Features**:
+- User role assignment
+- Permission matrix management
+- Audit log viewing
+- Bulk user operations
+
+## 🎯 QUICK ACCESS SHORTCUTS
+
+### Keyboard Shortcuts (Available globally)
+```
+Ctrl/Cmd + K : Global search
+Ctrl/Cmd + N : New OKR creation
+Ctrl/Cmd + D : Dashboard
+Ctrl/Cmd + M : OKR Management
+Ctrl/Cmd + / : Help documentation
+```
+
+### URL Shortcuts
+```
+/okr          → Redirects to /workspace/okr
+/create       → Redirects to /workspace/okr/create  
+/dashboard    → Redirects to /workspace/okr/dashboard
+/manage       → Redirects to /workspace/okr/manage
+```
+
+## 📚 DOCUMENTATION PATHS
+
+### User Guide
+```
+/help/user-guide
+```
+**Topics**: Getting started, OKR best practices, feature tutorials
+
+### API Reference
+```
+/help/api-reference
+```
+**Topics**: Endpoint documentation, SDKs, integration examples
+
+### FAQ & Troubleshooting
+```
+/help/faq
+```
+**Topics**: Common issues, troubleshooting guides, support contact
+
+---
+
+## 🔗 EXTERNAL INTEGRATIONS
+
+### Third-Party Connections
+```
+/workspace/integrations
+```
+**Available Integrations**:
+- Slack notifications
+- Microsoft Teams updates
+- Google Analytics data import
+- Salesforce CRM sync
+- Zapier automation triggers
+
+### Webhook Configuration
+```
+/workspace/integrations/webhooks
+```
+**Features**:
+- Custom endpoint configuration
+- Event type selection
+- Authentication setup
+- Test webhook delivery
+
+---
+
+**Note**: All paths require proper authentication and will respect multi-tenant permissions. Some advanced features may require specific role permissions as outlined in the system's RBAC configuration.
