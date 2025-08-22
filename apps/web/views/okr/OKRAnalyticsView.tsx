@@ -49,7 +49,7 @@ import {
   RefreshCw
 } from "lucide-react";
 
-import { useBrandContext } from "../../hooks/use-brand-context";
+import { useBrandContext } from "../../lib/okr-hooks-provider";
 import { ManagedOKR } from "../../types/okr-creation";
 
 // Analytics-specific types

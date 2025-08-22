@@ -4,12 +4,13 @@ import { OKREditView } from '../../../../../views/okr/OKREditView';
 import { ManagedOKR } from '../../../../../types/okr-creation';
 
 interface OKREditPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function OKREditPage({ params }: OKREditPageProps) {
+  const { id } = await params;
   const supabase = await createClient();
   
   // Check authentication
@@ -79,7 +80,7 @@ export default async function OKREditPage({ params }: OKREditPageProps) {
           unit
         )
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('brand_id', brandId)
       .single();
 

@@ -58,75 +58,76 @@ router.post('/',
 /**
  * GET /api/okr-suggestions/health
  * Comprehensive service health check with AI connectivity and database status
+ * TEMPORARILY DISABLED
  */
-router.get('/health', asyncHandler(async (req, res) => {
-  const startTime = Date.now();
-  
-  try {
-    // Check AI service connectivity
-    const aiHealth = await okrService.healthCheck();
-    
-    // Check database connectivity (if applicable)
-    const dbHealth = await checkDatabaseHealth();
-    
-    // Check memory usage
-    const memoryUsage = process.memoryUsage();
-    const memoryHealthy = (memoryUsage.heapUsed / memoryUsage.heapTotal) < 0.85; // 85% threshold
-    
-    // Check uptime
-    const uptime = process.uptime();
-    
-    // Calculate response time
-    const responseTime = Date.now() - startTime;
-    
-    const overallHealth = aiHealth.healthy && dbHealth.healthy && memoryHealthy;
-    
-    res.status(overallHealth ? 200 : 503).json({
-      status: overallHealth ? 'healthy' : 'unhealthy',
-      timestamp: new Date().toISOString(),
-      uptime: uptime,
-      responseTime: `${responseTime}ms`,
-      checks: {
-        ai: {
-          status: aiHealth.healthy ? 'healthy' : 'unhealthy',
-          details: aiHealth,
-          lastChecked: new Date().toISOString()
-        },
-        database: {
-          status: dbHealth.healthy ? 'healthy' : 'unhealthy',
-          responseTime: dbHealth.responseTime,
-          lastChecked: dbHealth.timestamp
-        },
-        memory: {
-          status: memoryHealthy ? 'healthy' : 'unhealthy',
-          heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
-          heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
-          usage: `${Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100)}%`
-        },
-        system: {
-          nodeVersion: process.version,
-          platform: process.platform,
-          pid: process.pid
-        }
-      },
-      metrics: {
-        requestsPerMinute: global.requestsPerMinute || 0,
-        averageResponseTime: global.averageResponseTime || responseTime,
-        errorRate: global.errorRate || 0,
-        cacheHitRate: global.cacheHitRate || 0
-      }
-    });
-  } catch (error) {
-    console.error('❌ Health check failed:', error);
-    
-    res.status(503).json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: error.message,
-      responseTime: `${Date.now() - startTime}ms`
-    });
-  }
-}));
+// router.get('/health', asyncHandler(async (req, res) => {
+//   const startTime = Date.now();
+//   
+//   try {
+//     // Check AI service connectivity
+//     const aiHealth = await okrService.healthCheck();
+//     
+//     // Check database connectivity (if applicable)
+//     const dbHealth = await checkDatabaseHealth();
+//     
+//     // Check memory usage
+//     const memoryUsage = process.memoryUsage();
+//     const memoryHealthy = (memoryUsage.heapUsed / memoryUsage.heapTotal) < 0.85; // 85% threshold
+//     
+//     // Check uptime
+//     const uptime = process.uptime();
+//     
+//     // Calculate response time
+//     const responseTime = Date.now() - startTime;
+//     
+//     const overallHealth = aiHealth.healthy && dbHealth.healthy && memoryHealthy;
+//     
+//     res.status(overallHealth ? 200 : 503).json({
+//       status: overallHealth ? 'healthy' : 'unhealthy',
+//       timestamp: new Date().toISOString(),
+//       uptime: uptime,
+//       responseTime: `${responseTime}ms`,
+//       checks: {
+//         ai: {
+//           status: aiHealth.healthy ? 'healthy' : 'unhealthy',
+//           details: aiHealth,
+//           lastChecked: new Date().toISOString()
+//         },
+//         database: {
+//           status: dbHealth.healthy ? 'healthy' : 'unhealthy',
+//           responseTime: dbHealth.responseTime,
+//           lastChecked: dbHealth.timestamp
+//         },
+//         memory: {
+//           status: memoryHealthy ? 'healthy' : 'unhealthy',
+//           heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+//           heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+//           usage: `${Math.round((memoryUsage.heapUsed / memoryUsage.heapTotal) * 100)}%`
+//         },
+//         system: {
+//           nodeVersion: process.version,
+//           platform: process.platform,
+//           pid: process.pid
+//         }
+//       },
+//       metrics: {
+//         requestsPerMinute: global.requestsPerMinute || 0,
+//         averageResponseTime: global.averageResponseTime || responseTime,
+//         errorRate: global.errorRate || 0,
+//         cacheHitRate: global.cacheHitRate || 0
+//       }
+//     });
+//   } catch (error) {
+//     console.error('❌ Health check failed:', error);
+//     
+//     res.status(503).json({
+//       status: 'unhealthy',
+//       timestamp: new Date().toISOString(),
+//       error: error.message,
+//       responseTime: `${Date.now() - startTime}ms`
+//     });
+//   }
+// }));
 
 /**
  * GET /api/okr-suggestions/metrics

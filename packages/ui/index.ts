@@ -50,12 +50,15 @@ export * from "./src/components/okr/forms/QuickEditForm";
 export * from "./src/components/okr/display/TemplateCard";
 export * from "./src/components/okr/display/OKRProgressCard";
 export * from "./src/components/okr/display/MetricBadge";
+export * from "./src/components/okr/display/OKRHealthBadge";
+export * from "./src/components/okr/display/ProgressRing";
 
 // OKR Components - Selectors
 export * from "./src/components/okr/selectors/IndustrySelector";
 export * from "./src/components/okr/selectors/MetricsSelector";
 export * from "./src/components/okr/selectors/PlatformMultiSelect";
 export * from "./src/components/okr/selectors/GranularityToggle";
+export * from "./src/components/okr/selectors/OKRSourceToggle";
 
 // OKR Components - Tables
 export * from "./src/components/okr/tables/BulkActionsToolbar";

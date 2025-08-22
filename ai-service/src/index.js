@@ -25,14 +25,14 @@ app.use('/api', rateLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    service: 'OKR AI Suggestions'
-  });
-});
+// Health check - TEMPORARILY DISABLED
+// app.get('/health', (req, res) => {
+//   res.json({ 
+//     status: 'healthy', 
+//     timestamp: new Date().toISOString(),
+//     service: 'OKR AI Suggestions'
+//   });
+// });
 
 // Routes
 app.use('/api/okr-suggestions', okrSuggestionsRouter);

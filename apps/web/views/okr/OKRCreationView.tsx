@@ -19,14 +19,17 @@ import {
   OKRCustomizationForm,
   BrandContextFormSimple,
   TemplateCard,
-  BulkActionsToolbar
+  BulkActionsToolbar,
+  OKRSourceToggle
 } from "@boastitup/ui";
 
-import { useOKRTemplates } from "../../hooks/use-okr-templates";
-import { useDimensions } from "../../hooks/use-dimensions";
-import { useCreateOKR } from "../../hooks/use-create-okr";
-import { useBrandContext } from "../../hooks/use-brand-context";
-import { useOKRSuggestions } from "@boastitup/hooks";
+import { 
+  useDimensions, 
+  useCreateOKR, 
+  useBrandContext,
+  useOKRTemplates
+} from "../../lib/okr-hooks-provider";
+import { useOKRSuggestions, OKRSourceType } from "@boastitup/hooks";
 import {
   OKRTemplate,
   OKRCustomization,
@@ -56,7 +59,8 @@ export function OKRCreationView({
   const [selectedIndustryId, setSelectedIndustryId] = useState<string>('');
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
   const [customizations, setCustomizations] = useState<Map<string, OKRCustomization>>(new Map());
-  const [activeStep, setActiveStep] = useState<'industry' | 'ai_context' | 'templates' | 'customize' | 'review'>('industry');
+  const [activeStep, setActiveStep] = useState<'industry' | 'source' | 'ai_context' | 'templates' | 'customize' | 'review'>('industry');
+  const [okrSource, setOKRSource] = useState<OKRSourceType>('ai');
   const [aiSuggestions, setAISuggestions] = useState<any[]>([]);
   const [showAIStep, setShowAIStep] = useState(false);
 
@@ -72,7 +76,7 @@ export function OKRCreationView({
     isLoading: dimensionsLoading 
   } = useDimensions();
   
-  const industrySlug = industries?.find(i => i.id === selectedIndustryId)?.slug;
+  const industrySlug = industries?.find(i => i.id === selectedIndustryId)?.slug || null;
   const { 
     templates, 
     isLoading: templatesLoading, 
@@ -100,26 +104,27 @@ export function OKRCreationView({
   const currentMetricTypes = metricTypes || initialMetricTypes || [];
   const currentDates = dates || initialDates || [];
 
-  // Use combined templates (AI suggestions + regular templates)
-  const combinedTemplates = [...(templates || []), ...aiSuggestions];
+  // Use combined templates (AI suggestions + regular templates) - as per story.txt
+  const combinedTemplates = [...(templates || []), ...suggestions];
+  
+  // Display templates based on selected source
+  const displayTemplates = okrSource === 'ai' 
+    ? [...suggestions, ...(templates || [])]  // AI suggestions first, then database as fallback
+    : (templates || []);  // Database only
+  
+  // Fallback detection - if AI was attempted but source switched to database
+  const hasFallenBack = okrSource === 'database' && suggestions.length === 0 && aiError;
 
   // Auto-select brand's industry if available
   useEffect(() => {
-    if (brandIndustry && currentIndustries.length > 0 && !selectedIndustryId) {
+    if (brandIndustry && currentIndustries?.length > 0 && !selectedIndustryId) {
       setSelectedIndustryId(brandIndustry.id);
+      setActiveStep('source'); // Progress to next step
     }
-  }, [brandIndustry, currentIndustries, selectedIndustryId]);
+  }, [brandIndustry?.id, currentIndustries?.length]); // Removed selectedIndustryId to prevent loop
 
-  // Auto-progress to AI context step when industry is selected
-  useEffect(() => {
-    if (selectedIndustryId && activeStep === 'industry' && aiServiceHealthy) {
-      setActiveStep('ai_context');
-      setShowAIStep(true);
-    } else if (selectedIndustryId && activeStep === 'industry') {
-      // Skip AI step if service is unhealthy
-      setActiveStep('templates');
-    }
-  }, [selectedIndustryId, activeStep, aiServiceHealthy]);
+  // Simplified step progression - handle in event handlers instead of useEffect to prevent loops
+  // Auto-select brand's industry if available
 
   // Handlers
   const handleIndustryChange = (industryId: string) => {
@@ -127,11 +132,27 @@ export function OKRCreationView({
     setSelectedTemplateIds(new Set());
     setCustomizations(new Map());
     setAISuggestions([]);
-    if (industryId && aiServiceHealthy) {
+    if (industryId) {
+      setActiveStep('source');
+    }
+  };
+
+  const handleSourceChange = (source: OKRSourceType) => {
+    if (source === 'ai' && !aiServiceHealthy) {
+      console.warn('Cannot switch to AI source: service is unhealthy, falling back to database');
+      source = 'database';
+    }
+    
+    setOKRSource(source);
+    setSelectedTemplateIds(new Set());
+    setCustomizations(new Map());
+    
+    if (source === 'ai' && aiServiceHealthy) {
       setActiveStep('ai_context');
       setShowAIStep(true);
-    } else if (industryId) {
+    } else {
       setActiveStep('templates');
+      setShowAIStep(false);
     }
   };
 
@@ -141,7 +162,7 @@ export function OKRCreationView({
     setSelectedTemplateIds(newSelected);
     
     // Initialize customization for new template
-    const template = combinedTemplates.find(t => t.id === templateId);
+    const template = displayTemplates.find(t => t.id === templateId);
     if (template && !customizations.has(templateId)) {
       const newCustomizations = new Map(customizations);
       newCustomizations.set(templateId, {
@@ -171,7 +192,7 @@ export function OKRCreationView({
     // Initialize customizations for all selected templates
     const newCustomizations = new Map();
     templateIds.forEach(templateId => {
-      const template = combinedTemplates.find(t => t.id === templateId);
+      const template = displayTemplates.find(t => t.id === templateId);
       if (template) {
         newCustomizations.set(templateId, {
           templateId: templateId,
@@ -350,8 +371,43 @@ export function OKRCreationView({
           </Card>
         </div>
 
-        {/* Step 1.5: AI Context Enhancement (only show when industry is selected and AI service is healthy) */}
-        {showAIStep && selectedIndustryId && (
+        {/* Step 2: OKR Source Selection */}
+        {selectedIndustryId && activeStep === 'source' && (
+          <div className="lg:col-span-2 space-y-4">
+            <Card className="ring-2 ring-primary">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full text-sm flex items-center justify-center">2</span>
+                  Choose OKR Source
+                </CardTitle>
+                <CardDescription>
+                  Select whether to use AI-powered suggestions or curated database templates
+                  {hasFallenBack && (
+                    <span className="block mt-1 text-amber-600 font-medium">
+                      ⚠️ Automatically switched to database due to AI service issues
+                    </span>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <OKRSourceToggle
+                  value={okrSource}
+                  onValueChange={handleSourceChange}
+                  variant="cards"
+                  aiServiceHealthy={aiServiceHealthy}
+                  aiError={aiError?.message || null}
+                />
+                
+                <div className="mt-4 text-xs text-muted-foreground">
+                  Available templates: AI ({suggestions.length}), Database ({(templates || []).length})
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Step 2.5: AI Context Enhancement (only show when AI source is selected) */}
+        {showAIStep && selectedIndustryId && okrSource === 'ai' && (
           <div className="lg:col-span-2 space-y-4">
             <Card className={activeStep === 'ai_context' ? 'ring-2 ring-primary' : ''}>
               <CardHeader>
@@ -385,13 +441,16 @@ export function OKRCreationView({
           </div>
         )}
 
-        {/* Step 2: Template Selection */}
+        {/* Step 3: Template Selection */}
         <div className="lg:col-span-2 space-y-4">
           <Card className={activeStep === 'templates' ? 'ring-2 ring-primary' : ''}>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full text-sm flex items-center justify-center">2</span>
+                <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full text-sm flex items-center justify-center">3</span>
                 Select Templates
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({okrSource === 'ai' ? 'AI-Powered' : 'Database'})
+                </span>
               </CardTitle>
               <CardDescription>
                 Choose OKR templates to customize for your goals
@@ -412,12 +471,12 @@ export function OKRCreationView({
               )}
               
               {/* Show AI suggestions if available */}
-              {aiSuggestions.length > 0 && (
+              {aiSuggestions.length > 0 && okrSource === 'ai' && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-green-700 mb-3 flex items-center gap-2">
                     🤖 AI-Powered Suggestions ({aiSuggestions.length})
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid gap-6 mb-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
                     {aiSuggestions.slice(0, 4).map(suggestion => (
                       <TemplateCard
                         key={suggestion.id}
@@ -433,30 +492,30 @@ export function OKRCreationView({
               )}
               
               <OKRTemplateGrid
-                templates={combinedTemplates}
+                templates={displayTemplates}
                 selectedTemplateIds={selectedTemplateIds}
                 onTemplateSelect={handleTemplateSelect}
                 onTemplateDeselect={handleTemplateDeselect}
                 onBulkSelect={handleBulkSelect}
-                isLoading={templatesLoading}
+                isLoading={templatesLoading || isGeneratingAI}
               />
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Step 3: Customization - Only show when templates are selected */}
+      {/* Step 4: Customization - Only show when templates are selected */}
       {selectedTemplateIds.size > 0 && (
         <div className="mt-8 space-y-6">
           <div className="flex items-center gap-2">
-            <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full text-sm flex items-center justify-center">3</span>
+            <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full text-sm flex items-center justify-center">4</span>
             <h2 className="text-xl font-semibold">Customize Your OKRs</h2>
           </div>
 
           {/* Bulk Actions */}
           <BulkActionsToolbar
             selectedCount={selectedTemplateIds.size}
-            onSelectAll={() => handleBulkSelect(combinedTemplates.map(t => t.id))}
+            onSelectAll={() => handleBulkSelect(displayTemplates.map(t => t.id))}
             onDeselectAll={() => handleBulkSelect([])}
             onBulkCustomize={handleBulkCustomize}
             disabled={isCreating}

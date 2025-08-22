@@ -180,4 +180,93 @@ export const OKRService = {
     if (error) throw error;
     return data;
   },
+
+  // 7. Fetch OKR Templates
+  fetchOKRTemplates: async (industrySlug?: string) => {
+    if (!industrySlug) {
+      return [];
+    }
+
+    const supabase = createClient();
+    
+    try {
+      // Query okr_master table filtered by industry
+      const { data: masterData, error: masterError } = await supabase
+        .from('okr_master')
+        .select(`
+          id,
+          industry,
+          category,
+          objective_title,
+          objective_description,
+          suggested_timeframe,
+          priority_level,
+          is_active,
+          tags
+        `)
+        .eq('industry', industrySlug)
+        .eq('is_active', true)
+        .order('priority_level', { ascending: true })
+        .order('category', { ascending: true });
+
+      if (masterError) {
+        throw new Error(masterError.message);
+      }
+
+      if (!masterData || masterData.length === 0) {
+        return [];
+      }
+
+      // Get metric types for each template from okr_master_metrics
+      const masterIds = masterData.map(m => m.id);
+      const { data: metricsData, error: metricsError } = await supabase
+        .from('okr_master_metrics')
+        .select(`
+          okr_master_id,
+          metric_type_id,
+          is_primary,
+          target_improvement_percentage,
+          weight,
+          dim_metric_type!inner (
+            id,
+            code,
+            description,
+            unit,
+            category
+          )
+        `)
+        .in('okr_master_id', masterIds);
+
+      if (metricsError) {
+        console.warn('Failed to load metric types:', metricsError.message);
+      }
+
+      // Transform to OKRTemplate format
+      const templates = masterData.map(master => {
+        // Find primary metric type for this template
+        const primaryMetric = metricsData?.find(
+          m => m.okr_master_id === master.id && m.is_primary
+        );
+        
+        return {
+          id: master.id,
+          okrMasterId: master.id,
+          title: master.objective_title,
+          description: master.objective_description || '',
+          category: master.category,
+          priority: master.priority_level,
+          suggestedTargetValue: primaryMetric?.target_improvement_percentage || 10,
+          suggestedTimeframe: master.suggested_timeframe as 'daily' | 'weekly' | 'monthly' | 'quarterly' || 'quarterly',
+          applicablePlatforms: [],
+          metricTypeId: primaryMetric?.metric_type_id || '',
+          confidenceScore: 0.85,
+          reasoning: `Suggested for ${master.industry} industry in ${master.category} category`
+        };
+      });
+
+      return templates;
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to fetch OKR templates');
+    }
+  },
 };

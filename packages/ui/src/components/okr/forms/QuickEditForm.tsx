@@ -400,7 +400,7 @@ export function QuickEditForm({
                 <SelectValue placeholder="Select platform (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Platforms</SelectItem>
+                <SelectItem value="none">All Platforms</SelectItem>
                 {platforms.map((platform) => (
                   <SelectItem key={platform.id} value={platform.id}>
                     {platform.display_name}

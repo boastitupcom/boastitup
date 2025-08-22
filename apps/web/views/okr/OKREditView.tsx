@@ -27,8 +27,7 @@ import {
   AlertDescription
 } from "@boastitup/ui";
 
-import { useOKRManagement } from "../../hooks/use-okr-management";
-import { useBrandContext } from "../../hooks/use-brand-context";
+import { useOKRManagement, useBrandContext } from "../../lib/okr-hooks-provider";
 import { 
   ManagedOKR, 
   Platform,
@@ -54,16 +53,16 @@ export function OKREditView({
 }: OKREditViewProps) {
   // Form state
   const [formData, setFormData] = useState({
-    title: okr.title,
-    description: okr.description,
-    target_value: okr.target_value,
-    current_value: okr.current_value,
-    status: okr.status,
-    priority: okr.priority,
-    granularity: okr.granularity,
-    target_date_id: okr.target_date_id,
-    platform_id: okr.platform_id || '',
-    metric_type_id: okr.metric_type_id
+    title: okr?.title || '',
+    description: okr?.description || '',
+    target_value: okr?.target_value || 0,
+    current_value: okr?.current_value || 0,
+    status: okr?.status || 'active',
+    priority: okr?.priority || 1,
+    granularity: okr?.granularity || 'daily',
+    target_date_id: okr?.target_date_id || 0,
+    platform_id: okr?.platform_id || 'none',
+    metric_type_id: okr?.metric_type_id || ''
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -89,7 +88,7 @@ export function OKREditView({
       formData.priority !== okr.priority ||
       formData.granularity !== okr.granularity ||
       formData.target_date_id !== okr.target_date_id ||
-      formData.platform_id !== (okr.platform_id || '') ||
+      formData.platform_id !== (okr.platform_id || 'none') ||
       formData.metric_type_id !== okr.metric_type_id;
     
     setHasChanges(hasChanged);
@@ -324,7 +323,7 @@ export function OKREditView({
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
                 <Select
-                  value={formData.priority.toString()}
+                  value={formData.priority?.toString() || '1'}
                   onValueChange={(value) => handleInputChange('priority', parseInt(value))}
                 >
                   <SelectTrigger>
@@ -413,7 +412,7 @@ export function OKREditView({
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
                   {futureDates.map((date) => (
-                    <SelectItem key={date.id} value={date.id.toString()}>
+                    <SelectItem key={date.id} value={date.id?.toString() || date.id}>
                       <div className="flex flex-col">
                         <span>{new Date(date.date).toLocaleDateString()}</span>
                         <span className="text-xs text-muted-foreground">
@@ -437,7 +436,7 @@ export function OKREditView({
                   <SelectValue placeholder="Select platform..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Platforms</SelectItem>
+                  <SelectItem value="none">All Platforms</SelectItem>
                   {platforms.map((platform) => (
                     <SelectItem key={platform.id} value={platform.id}>
                       <div className="flex flex-col">

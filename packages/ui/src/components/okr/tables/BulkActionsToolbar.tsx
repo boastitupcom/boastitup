@@ -157,14 +157,14 @@ export function BulkActionsToolbar({
                     Granularity
                   </Label>
                   <Select
-                    value={bulkCustomization.granularity || ''}
-                    onValueChange={(value) => handleInputChange('granularity', value || undefined)}
+                    value={bulkCustomization.granularity || 'default'}
+                    onValueChange={(value) => handleInputChange('granularity', value === 'default' ? undefined : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Keep individual defaults" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Keep individual defaults</SelectItem>
+                      <SelectItem value="default">Keep individual defaults</SelectItem>
                       <SelectItem value="daily">Daily</SelectItem>
                       <SelectItem value="weekly">Weekly</SelectItem>
                       <SelectItem value="monthly">Monthly</SelectItem>
@@ -178,14 +178,14 @@ export function BulkActionsToolbar({
                     Priority Level
                   </Label>
                   <Select
-                    value={bulkCustomization.priority?.toString() || ''}
-                    onValueChange={(value) => handleInputChange('priority', value ? parseInt(value) : undefined)}
+                    value={bulkCustomization.priority?.toString() || 'default'}
+                    onValueChange={(value) => handleInputChange('priority', value === 'default' ? undefined : parseInt(value))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Keep individual defaults" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Keep individual defaults</SelectItem>
+                      <SelectItem value="default">Keep individual defaults</SelectItem>
                       <SelectItem value="1">🔴 High Priority</SelectItem>
                       <SelectItem value="2">🟡 Medium Priority</SelectItem>
                       <SelectItem value="3">🟢 Low Priority</SelectItem>

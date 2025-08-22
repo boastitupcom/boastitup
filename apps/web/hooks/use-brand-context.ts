@@ -133,10 +133,10 @@ export function useBrandContext(brandId?: string) {
       const tenantRole = tenantRoleResponse.data?.role || 'member';
       const brandRole = brandRoleResponse.data?.role || 'contributor';
 
-      const permissions: UserPermissions = {
-        canCreateOKRs: tenantRole === 'admin' || brandRole === 'manager' || brandRole === 'editor',
-        canEditOKRs: tenantRole === 'admin' || brandRole === 'manager' || brandRole === 'editor',
-        canDeleteOKRs: tenantRole === 'admin' || brandRole === 'manager',
+   const permissions: UserPermissions = {
+        canCreateOKRs: tenantRole === 'contributor' || brandRole === 'contributor' || brandRole === 'contributor',
+        canEditOKRs: tenantRole === 'contributor' || brandRole === 'contributor' || brandRole === 'contributor',
+        canDeleteOKRs: tenantRole === 'contributor' || brandRole === 'contributor',
         canViewAnalytics: true, // All users can view analytics
         tenantRole,
         brandRole

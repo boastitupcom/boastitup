@@ -58,7 +58,7 @@ export function OKRTemplateGrid({
           <h3 className="text-lg font-semibold">Available OKR Templates</h3>
           <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridTemplateRows: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
           {Array.from({ length: 6 }).map((_, index) => (
             <TemplateCardSkeleton key={index} />
           ))}
@@ -103,7 +103,10 @@ export function OKRTemplateGrid({
       </div>
 
       {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid gap-6" style={{ 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
+        gridAutoRows: 'min-content'
+      }}>
         {templates.map((template) => (
           <TemplateCard
             key={template.id}
@@ -124,71 +127,127 @@ interface TemplateCardProps {
 }
 
 function TemplateCard({ template, isSelected, onToggle }: TemplateCardProps) {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  
   return (
     <Card 
       className={cn(
-        "cursor-pointer transition-all duration-200 hover:shadow-md",
-        isSelected && "ring-2 ring-primary ring-offset-2 bg-primary/5"
+        "cursor-pointer transition-all duration-200 hover:shadow-lg border-2 flex flex-col",
+        "min-h-[360px] h-full w-full", // Ensure consistent height and full width
+        isSelected && "ring-2 ring-primary ring-offset-2 bg-primary/5 border-primary",
+        "hover:border-primary/50 hover:shadow-lg"
       )}
       onClick={onToggle}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
             <Checkbox
               checked={isSelected}
               onCheckedChange={onToggle}
               onClick={(e) => e.stopPropagation()}
+              className="mt-1"
             />
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base line-clamp-2 leading-tight">
+              <CardTitle 
+                className="text-lg font-semibold leading-tight cursor-pointer hover:text-primary transition-colors"
+                title={template.title}
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  lineHeight: '1.3'
+                }}
+              >
                 {template.title}
               </CardTitle>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex items-center gap-2 mt-3">
           <Badge
             variant="outline"
             className={cn(
-              "text-xs",
+              "text-xs px-2 py-1 font-medium border-2",
               priorityColors[template.priority as keyof typeof priorityColors]
             )}
           >
             {priorityLabels[template.priority as keyof typeof priorityLabels]}
           </Badge>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-xs px-2 py-1">
             {template.category}
           </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        {template.description && (
-          <CardDescription className="text-sm line-clamp-3 mb-3">
-            {template.description}
-          </CardDescription>
-        )}
-        
-        <div className="space-y-2 text-xs text-muted-foreground">
-          <div className="flex items-center justify-between">
-            <span>Timeframe:</span>
-            <span className="font-medium capitalize">{template.suggestedTimeframe}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Confidence:</span>
-            <span className="font-medium">{Math.round(template.confidenceScore * 100)}%</span>
-          </div>
-        </div>
+      <CardContent className="pt-0 flex-1 flex flex-col justify-between">
+        <div className="flex-1">
+          {template.description && (
+            <div className="mb-4">
+              <CardDescription 
+                className={cn(
+                  "text-sm text-gray-600 leading-relaxed cursor-pointer transition-all",
+                  !isExpanded ? "line-clamp-3" : "line-clamp-none"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+                title={!isExpanded ? "Click to expand description" : "Click to collapse description"}
+              >
+                {template.description}
+                {!isExpanded && template.description && template.description.length > 150 && (
+                  <span className="text-primary font-medium ml-1 hover:underline">... read more</span>
+                )}
+              </CardDescription>
+            </div>
+          )}
 
-        {template.reasoning && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <p className="text-xs text-muted-foreground italic line-clamp-2">
-              {template.reasoning}
-            </p>
+          {template.reasoning && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p 
+                className={cn(
+                  "text-xs text-blue-700 leading-relaxed cursor-pointer",
+                  !isExpanded && "line-clamp-2"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+                title="AI reasoning - click to expand"
+              >
+                💡 {template.reasoning}
+              </p>
+            </div>
+          )}
+        </div>
+        
+        <div className="space-y-3 mt-auto">
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
+              <span className="text-gray-600 font-medium">Timeframe:</span>
+              <span className="font-semibold text-gray-900 capitalize">{template.suggestedTimeframe}</span>
+            </div>
+            <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
+              <span className="text-gray-600 font-medium">Confidence:</span>
+              <span className="font-semibold text-gray-900">{Math.round(template.confidenceScore * 100)}%</span>
+            </div>
           </div>
-        )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full mt-3 text-primary hover:bg-primary/10"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+          >
+            {isExpanded ? 'Show Less' : 'View Details'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -196,39 +255,45 @@ function TemplateCard({ template, isSelected, onToggle }: TemplateCardProps) {
 
 function TemplateCardSkeleton() {
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="min-h-[360px] h-full w-full flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
-            <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-4 bg-gray-200 rounded animate-pulse mt-1" />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
-              <div className="h-3 w-1/2 bg-gray-200 rounded animate-pulse" />
+              <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse" />
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-2 mt-2">
-          <div className="h-5 w-20 bg-gray-200 rounded animate-pulse" />
-          <div className="h-5 w-16 bg-gray-200 rounded animate-pulse" />
+        <div className="flex items-center gap-2 mt-3">
+          <div className="h-6 w-24 bg-gray-200 rounded animate-pulse" />
+          <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        <div className="space-y-2 mb-3">
-          <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
-          <div className="h-3 w-3/4 bg-gray-200 rounded animate-pulse" />
+      <CardContent className="pt-0 flex-1 flex flex-col justify-between">
+        <div className="flex-1">
+          <div className="space-y-2 mb-4">
+            <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
+          </div>
         </div>
         
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-            <div className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
+        <div className="space-y-3 mt-auto">
+          <div className="space-y-2">
+            <div className="bg-gray-100 px-3 py-2 rounded-md flex items-center justify-between">
+              <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="bg-gray-100 px-3 py-2 rounded-md flex items-center justify-between">
+              <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-12 bg-gray-200 rounded animate-pulse" />
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-            <div className="h-3 w-8 bg-gray-200 rounded animate-pulse" />
-          </div>
+          <div className="h-9 w-full bg-gray-200 rounded animate-pulse" />
         </div>
       </CardContent>
     </Card>

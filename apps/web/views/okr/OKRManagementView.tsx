@@ -43,8 +43,8 @@ import {
   DialogTrigger
 } from "@boastitup/ui";
 
-import { useOKRManagement } from "../../hooks/use-okr-management";
-import { useBrandContext } from "../../hooks/use-brand-context";
+import { useOKRManagement } from "../../lib/okr-hooks-provider";
+import { useBrandContext } from "../../lib/okr-hooks-provider";
 import { 
   ManagedOKR, 
   OKRManagementViewProps,

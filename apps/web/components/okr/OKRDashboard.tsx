@@ -13,7 +13,7 @@ import { StatusDonutChart } from './StatusDonutChart';
 import { EndDateBarChart } from './EndDateBarChart';
 import { InsightsColumn } from './InsightsColumn';
 import { OKRDebugInfo } from './OKRDebugInfo';
-import { useCurrentPerformanceOKRs, useAttentionMetrics, useOKRTrendAnalysis } from '../../hooks/useOKRData';
+import { useCurrentPerformanceOKRs, useAttentionMetrics, useOKRTrendAnalysis } from '../../lib/okr-hooks-provider';
 import { useBrandStore } from '../../store/brandStore';
 import { AlertTriangle, Target, BarChart3, Eye, Brain } from 'lucide-react';
 
