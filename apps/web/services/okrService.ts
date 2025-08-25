@@ -181,39 +181,114 @@ export const OKRService = {
     return data;
   },
 
-  // 7. Fetch OKR Templates
+  // 7. Fetch OKR Templates with cascading fallback strategy
   fetchOKRTemplates: async (industrySlug?: string) => {
-    if (!industrySlug) {
-      return [];
-    }
-
     const supabase = createClient();
     
     try {
-      // Query okr_master table filtered by industry
-      const { data: masterData, error: masterError } = await supabase
-        .from('okr_master')
-        .select(`
-          id,
-          industry,
-          category,
-          objective_title,
-          objective_description,
-          suggested_timeframe,
-          priority_level,
-          is_active,
-          tags
-        `)
-        .eq('industry', industrySlug)
-        .eq('is_active', true)
-        .order('priority_level', { ascending: true })
-        .order('category', { ascending: true });
+      console.log(`[OKRService.fetchOKRTemplates] Starting cascading query for industry slug: "${industrySlug}"`);
+      
+      let masterData: any[] | null = null;
+      let queryMethod = 'none';
 
-      if (masterError) {
-        throw new Error(masterError.message);
+      // Strategy 1: Exact industry slug match (if provided)
+      if (industrySlug) {
+        console.log(`[OKRService] Attempt 1: Exact match for "${industrySlug}"`);
+        const { data: exactData, error: exactError } = await supabase
+          .from('okr_master')
+          .select(`
+            id,
+            industry,
+            category,
+            objective_title,
+            objective_description,
+            suggested_timeframe,
+            priority_level,
+            is_active,
+            tags
+          `)
+          .eq('is_active', true)
+          .eq('industry', industrySlug)
+          .order('priority_level', { ascending: true })
+          .order('category', { ascending: true });
+
+        if (exactError) {
+          console.warn(`[OKRService] Exact match query error:`, exactError.message);
+        } else if (exactData && exactData.length > 0) {
+          masterData = exactData;
+          queryMethod = 'exact_match';
+          console.log(`[OKRService] ✅ Exact match found: ${exactData.length} templates`);
+        } else {
+          console.log(`[OKRService] ❌ No exact match for "${industrySlug}"`);
+        }
       }
 
+      // Strategy 2: Partial industry name matching using ILIKE (fallback)
+      if (!masterData && industrySlug) {
+        console.log(`[OKRService] Attempt 2: Partial match for "${industrySlug}"`);
+        const { data: partialData, error: partialError } = await supabase
+          .from('okr_master')
+          .select(`
+            id,
+            industry,
+            category,
+            objective_title,
+            objective_description,
+            suggested_timeframe,
+            priority_level,
+            is_active,
+            tags
+          `)
+          .eq('is_active', true)
+          .ilike('industry', `%${industrySlug}%`)
+          .order('priority_level', { ascending: true })
+          .order('category', { ascending: true });
+
+        if (partialError) {
+          console.warn(`[OKRService] Partial match query error:`, partialError.message);
+        } else if (partialData && partialData.length > 0) {
+          masterData = partialData;
+          queryMethod = 'partial_match';
+          console.log(`[OKRService] ✅ Partial match found: ${partialData.length} templates`);
+        } else {
+          console.log(`[OKRService] ❌ No partial match for "${industrySlug}"`);
+        }
+      }
+
+      // Strategy 3: Load all active templates (final fallback)
+      if (!masterData) {
+        console.log(`[OKRService] Attempt 3: Loading all active templates as fallback`);
+        const { data: allData, error: allError } = await supabase
+          .from('okr_master')
+          .select(`
+            id,
+            industry,
+            category,
+            objective_title,
+            objective_description,
+            suggested_timeframe,
+            priority_level,
+            is_active,
+            tags
+          `)
+          .eq('is_active', true)
+          .order('priority_level', { ascending: true })
+          .order('category', { ascending: true });
+
+        if (allError) {
+          throw new Error(allError.message);
+        } else {
+          masterData = allData;
+          queryMethod = 'all_templates';
+          console.log(`[OKRService] ✅ Fallback successful: ${allData?.length || 0} templates loaded`);
+        }
+      }
+
+      console.log(`[OKRService] Query method used: ${queryMethod}`);
+      console.log(`[OKRService.fetchOKRTemplates] Found ${masterData?.length || 0} master templates`);
+
       if (!masterData || masterData.length === 0) {
+        console.log(`[OKRService.fetchOKRTemplates] No templates found after all fallback strategies`);
         return [];
       }
 
@@ -264,6 +339,8 @@ export const OKRService = {
         };
       });
 
+      console.log(`[OKRService.fetchOKRTemplates] Successfully transformed ${templates.length} templates`);
+      console.log(`[OKRService.fetchOKRTemplates] Returning templates array:`, templates?.slice(0, 2));
       return templates;
     } catch (error) {
       throw error instanceof Error ? error : new Error('Failed to fetch OKR templates');

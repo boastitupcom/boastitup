@@ -1,0 +1,185 @@
+OKR Templates Database Test
+Test Results
+🔍 Testing OKR Templates Database...
+
+1️⃣ Testing industries table...
+✅ Found 10 industries
+Industries:
+  - Healthcare (slug: healthcare)
+  - Technology (slug: technology)
+  - Automotive (slug: automotive)
+  - Cement and Building Materials (slug: cement-building-materials)
+  - Education (slug: education)
+  - Real Estate (slug: realestate)
+  - Fashion & Beauty (slug: fashion)
+  - Fitness & Nutrition (slug: fitness)
+  - Travel & Hospitality (slug: travel)
+  - Food & Beverage (slug: food)
+
+2️⃣ Testing okr_master table...
+✅ Found 20 active OKR templates
+Sample templates:
+  1. "Grow Instagram Following by 50%"
+     Industry: "fitness"
+     Category: Growth
+     Priority: 1
+
+  2. "Achieve 8% Average Engagement Rate"
+     Industry: "fitness"
+     Category: Engagement
+     Priority: 1
+
+  3. "Increase Social Commerce Revenue by 40%"
+     Industry: "fitness"
+     Category: Revenue
+     Priority: 1
+
+  4. "Build Email List to 50K Subscribers"
+     Industry: "supplements"
+     Category: Growth
+     Priority: 1
+
+  5. "Achieve 5% CTR on Educational Content"
+     Industry: "supplements"
+     Category: Engagement
+     Priority: 1
+
+🏭 Industries in okr_master:
+  - "fitness" (6 templates)
+  - "supplements" (4 templates)
+  - "bakery" (2 templates)
+  - "general" (5 templates)
+  - "activewear" (3 templates)
+
+3️⃣ Testing filter for industry: "fitness"
+✅ Filter returned 6 templates for "fitness"
+  - Grow Instagram Following by 50%
+  - Achieve 8% Average Engagement Rate
+  - Increase Social Commerce Revenue by 40%
+  - Build Loyal Community of 10K Active Members
+  - Generate 1M Monthly Impressions
+  - Launch User-Generated Content Campaign
+
+🏁 Test completed!
+Industries Table (10)
+Healthcare
+slug: healthcare
+Technology
+slug: technology
+Automotive
+slug: automotive
+Cement and Building Materials
+slug: cement-building-materials
+Education
+slug: education
+Real Estate
+slug: realestate
+Fashion & Beauty
+slug: fashion
+Fitness & Nutrition
+slug: fitness
+Travel & Hospitality
+slug: travel
+Food & Beverage
+slug: food
+OKR Templates (20)
+Grow Instagram Following by 50%
+Industry: fitness
+Category: Growth
+Priority: 1
+Increase Instagram follower base to expand brand reach and engagement
+Achieve 8% Average Engagement Rate
+Industry: fitness
+Category: Engagement
+Priority: 1
+Improve content quality and community interaction to boost engagement
+Increase Social Commerce Revenue by 40%
+Industry: fitness
+Category: Revenue
+Priority: 1
+Drive direct sales through social media channels
+Build Email List to 50K Subscribers
+Industry: supplements
+Category: Growth
+Priority: 1
+Grow email list for direct marketing and customer retention
+Achieve 5% CTR on Educational Content
+Industry: supplements
+Category: Engagement
+Priority: 1
+Create valuable educational content about health and wellness
+Increase Customer LTV by 60%
+Industry: supplements
+Category: Revenue
+Priority: 1
+Maximize customer lifetime value through subscription model
+Achieve 70% Subscription Retention Rate
+Industry: supplements
+Category: Retention
+Priority: 1
+Reduce churn in subscription program
+Increase Local Market Reach by 200%
+Industry: bakery
+Category: Growth
+Priority: 1
+Expand local customer base through targeted social campaigns
+Launch Online Ordering with 25% Adoption
+Industry: bakery
+Category: Revenue
+Priority: 1
+Drive online orders through social channels
+Achieve 30% MoM Growth Across All Channels
+Industry: general
+Category: Growth
+Priority: 1
+Consistent growth across all marketing channels
+Improve Overall Engagement Rate to 6%
+Industry: general
+Category: Engagement
+Priority: 1
+Boost engagement across all social platforms
+Reduce CAC by 25%
+Industry: general
+Category: Revenue
+Priority: 1
+Optimize customer acquisition costs
+Achieve 3x ROAS
+Industry: general
+Category: Revenue
+Priority: 1
+Optimize return on advertising spend
+Scale TikTok Presence to 100K Followers
+Industry: activewear
+Category: Growth
+Priority: 1
+Build strong presence on TikTok to reach younger demographics
+Achieve 10% Engagement on Lifestyle Content
+Industry: activewear
+Category: Engagement
+Priority: 1
+Create compelling lifestyle content that resonates with target audience
+Drive 30% of Revenue from Social Channels
+Industry: activewear
+Category: Revenue
+Priority: 1
+Optimize social commerce and shoppable posts
+Build Loyal Community of 10K Active Members
+Industry: fitness
+Category: Retention
+Priority: 2
+Create engaged community of repeat customers and brand advocates
+Generate 1M Monthly Impressions
+Industry: fitness
+Category: Brand Awareness
+Priority: 2
+Expand brand visibility across social platforms
+Launch User-Generated Content Campaign
+Industry: fitness
+Category: Content
+Priority: 2
+Encourage customers to share transformation stories and workouts
+Increase NPS to 70+
+Industry: general
+Category: Retention
+Priority: 2
+Build strong customer satisfaction and advocacy

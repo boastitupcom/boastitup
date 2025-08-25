@@ -6,9 +6,13 @@ import { Button } from "./button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card";
 import { Checkbox } from "./checkbox";
 import { Badge } from "./badge";
+import { Alert, AlertDescription } from "./alert";
+import { RefreshCw, AlertTriangle, Bug, Database, Clock } from "lucide-react";
 import { 
   OKRTemplate, 
-  OKRTemplateGridProps 
+  OKRTemplateGridProps,
+  TemplateDebugInfo,
+  TemplateLoadingState
 } from '../../../../../apps/web/types/okr-creation';
 
 const priorityColors = {
@@ -29,7 +33,12 @@ export function OKRTemplateGrid({
   onTemplateSelect,
   onTemplateDeselect,
   onBulkSelect,
-  isLoading = false
+  isLoading = false,
+  error = null,
+  debugInfo = null,
+  loadingState = null,
+  onRetry,
+  debugMode = false
 }: OKRTemplateGridProps) {
   const handleTemplateToggle = (templateId: string) => {
     if (selectedTemplateIds.has(templateId)) {
@@ -51,12 +60,61 @@ export function OKRTemplateGrid({
   const allSelected = templates.length > 0 && selectedTemplateIds.size === templates.length;
   const someSelected = selectedTemplateIds.size > 0 && selectedTemplateIds.size < templates.length;
 
+  // Debug panel component
+  const DebugPanel = () => {
+    if (!debugMode || !debugInfo) return null;
+    
+    return (
+      <Card className="mb-6 border-blue-200 bg-blue-50">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Bug className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm text-blue-800">Debug Information</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            <div>
+              <strong>Query Details:</strong>
+              <ul className="mt-1 space-y-1 text-blue-700">
+                <li>Industry Slug: {debugInfo.industrySlug || 'null'}</li>
+                <li>Query Method: {debugInfo.queryMethod}</li>
+                <li>Execution Time: {debugInfo.executionTime.toFixed(2)}ms</li>
+                <li>Timestamp: {new Date(debugInfo.timestamp).toLocaleTimeString()}</li>
+              </ul>
+            </div>
+            <div>
+              <strong>Results:</strong>
+              <ul className="mt-1 space-y-1 text-blue-700">
+                <li>Templates Found: {debugInfo.results.totalFound}</li>
+                <li>Fallback Used: {loadingState?.fallbackAttempted ? 'Yes' : 'No'}</li>
+                <li>Retry Count: {loadingState?.retryCount || 0}</li>
+                <li>Has Error: {loadingState?.hasError ? 'Yes' : 'No'}</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
+        <DebugPanel />
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Available OKR Templates</h3>
-          <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Available OKR Templates</h3>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4 animate-spin" />
+              <span>Loading templates...</span>
+              {loadingState?.retryCount && loadingState.retryCount > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  Retry {loadingState.retryCount}
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
         <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gridTemplateRows: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
           {Array.from({ length: 6 }).map((_, index) => (

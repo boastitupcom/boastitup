@@ -153,12 +153,49 @@ export interface OKRCustomization {
   notes?: string;
 }
 
+// Debug and Error Handling Types
+export interface TemplateDebugInfo {
+  industrySlug: string | null;
+  queryParams: {
+    table: string;
+    filter: string;
+    value: string | null;
+  };
+  results: {
+    totalFound: number;
+    templates: OKRTemplate[];
+  };
+  timestamp: string;
+  executionTime: number;
+  queryMethod: 'exact_match' | 'contains_match' | 'all_templates' | 'fallback';
+}
+
+export interface TemplateLoadingState {
+  isLoading: boolean;
+  hasError: boolean;
+  errorMessage: string | null;
+  debugInfo: TemplateDebugInfo | null;
+  fallbackAttempted: boolean;
+  retryCount: number;
+}
+
+export interface TemplateErrorState {
+  level: 'warning' | 'error' | 'critical';
+  message: string;
+  technicalDetails: string;
+  suggestedAction: string;
+  retryAvailable: boolean;
+}
+
 // Hook Return Types
 export interface UseOKRTemplatesReturn {
   templates: OKRTemplate[] | null;
   isLoading: boolean;
   error: Error | null;
-  refetch: () => Promise<void>;
+  refetch: (resetRetryCount?: boolean) => Promise<void>;
+  retryWithBackoff: () => Promise<void>;
+  debugInfo?: TemplateDebugInfo | null;
+  loadingState?: TemplateLoadingState;
 }
 
 export interface UseDimensionsReturn {
@@ -265,6 +302,11 @@ export interface OKRTemplateGridProps {
   onTemplateDeselect: (templateId: string) => void;
   onBulkSelect: (templateIds: string[]) => void;
   isLoading?: boolean;
+  error?: Error | null;
+  debugInfo?: TemplateDebugInfo | null;
+  loadingState?: TemplateLoadingState | null;
+  onRetry?: () => void;
+  debugMode?: boolean;
 }
 
 export interface OKRCustomizationFormProps {

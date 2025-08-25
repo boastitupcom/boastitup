@@ -29,7 +29,17 @@ const okrServiceImpl: OKRServiceInterface = {
   fetchAttentionMetrics: (brandId: string) => OKRService.fetchAttentionMetrics(brandId),
   fetchAIInsights: (brandId: string) => OKRService.fetchAIInsights(brandId),
   fetchOKRPerformance: (params) => OKRService.fetchOKRPerformance(params),
-  fetchOKRTemplates: (industrySlug?: string) => OKRService.fetchOKRTemplates(industrySlug),
+  fetchOKRTemplates: async (industrySlug?: string) => {
+    try {
+      console.log(`[OKRServiceImpl] Calling fetchOKRTemplates with industrySlug: "${industrySlug}"`);
+      const result = await OKRService.fetchOKRTemplates(industrySlug);
+      console.log(`[OKRServiceImpl] fetchOKRTemplates returned:`, result?.length, 'templates');
+      return result;
+    } catch (error) {
+      console.error(`[OKRServiceImpl] fetchOKRTemplates failed:`, error);
+      throw error;
+    }
+  },
 };
 
 // Brand Context Service Implementation

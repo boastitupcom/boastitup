@@ -1,6 +1,7 @@
 import { createClient } from '@boastitup/supabase/server';
 import { redirect } from 'next/navigation';
 import { OKRCreationView } from '../../../../views/okr/OKRCreationView';
+import { OKRErrorBoundary } from '../../../../components/okr/ErrorBoundary';
 import { Industry, Platform, MetricType, DateDimension } from '../../../../types/okr-creation';
 
 export default async function OKRCreatePage() {
@@ -124,13 +125,15 @@ export default async function OKRCreatePage() {
     }));
 
     return (
-      <OKRCreationView
-        initialIndustries={industries}
-        initialPlatforms={platforms}
-        initialMetricTypes={metricTypes}
-        initialDates={dates}
-        brandId={brandId}
-      />
+      <OKRErrorBoundary>
+        <OKRCreationView
+          initialIndustries={industries}
+          initialPlatforms={platforms}
+          initialMetricTypes={metricTypes}
+          initialDates={dates}
+          brandId={brandId}
+        />
+      </OKRErrorBoundary>
     );
 
   } catch (error) {
@@ -138,13 +141,15 @@ export default async function OKRCreatePage() {
     
     // Fallback: render with empty initial data - hooks will handle the loading
     return (
-      <OKRCreationView
-        initialIndustries={[]}
-        initialPlatforms={[]}
-        initialMetricTypes={[]}
-        initialDates={[]}
-        brandId={brandId}
-      />
+      <OKRErrorBoundary>
+        <OKRCreationView
+          initialIndustries={[]}
+          initialPlatforms={[]}
+          initialMetricTypes={[]}
+          initialDates={[]}
+          brandId={brandId}
+        />
+      </OKRErrorBoundary>
     );
   }
 }

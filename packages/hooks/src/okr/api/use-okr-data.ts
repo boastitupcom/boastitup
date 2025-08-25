@@ -114,7 +114,38 @@ export const createOKRDataHooks = (okrService: OKRServiceInterface) => {
       queryKey: ['okrTemplates', industrySlug],
       queryFn: () => okrService.fetchOKRTemplates(industrySlug),
       staleTime: STALE_TIME_MINUTES,
-      enabled: !!industrySlug,
+      enabled: true, // Always fetch templates - industrySlug can be null to get all templates
+      // Task 3: Error boundary and retry mechanism with exponential backoff
+      retry: (failureCount, error) => {
+        console.log(`[useOKRTemplates] Retry attempt ${failureCount} for industry "${industrySlug}":`, error);
+        // Retry up to 3 times for network errors, but not for business logic errors
+        if (failureCount < 3) {
+          const isNetworkError = error instanceof Error && (
+            error.message.includes('fetch') ||
+            error.message.includes('network') ||
+            error.message.includes('timeout') ||
+            error.message.includes('abort')
+          );
+          return isNetworkError;
+        }
+        return false;
+      },
+      retryDelay: (attemptIndex) => {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.min(1000 * (2 ** attemptIndex), 30000);
+        console.log(`[useOKRTemplates] Retrying in ${delay}ms...`);
+        return delay;
+      },
+      onError: (error) => {
+        console.error(`[useOKRTemplates] Final error for industry "${industrySlug}":`, {
+          message: error.message,
+          industrySlug,
+          timestamp: new Date().toISOString()
+        });
+      },
+      onSuccess: (data) => {
+        console.log(`[useOKRTemplates] Successfully fetched ${data?.length || 0} templates for industry "${industrySlug}"`);
+      },
     });
   };
 
