@@ -4,8 +4,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class OKRSuggestionService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+    console.log('Initializing OKRSuggestionService with Google Gemini AI and Database Service ' + process.env.GEMINI_API_KEY);
+    this.genAI = new GoogleGenerativeAI('AIzaSyDPk95Vz12I6YweDsrnnC5BoloTLSWJEK4');
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
     this.dbService = new DatabaseService();
   }
 
