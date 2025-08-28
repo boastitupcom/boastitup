@@ -1,0 +1,970 @@
+🚀 Tech Story: Brand Health Dashboard: Read-Only Overview
+📌 Feature Name
+Brand Health Dashboard: Read-Only Overview
+
+🎯 Introduction
+A unified dashboard that provides an at-a-glance, holistic measure of a brand's performance and reputation across digital platforms. The Brand Health Dashboard combines automated scoring, real-time insights, and actionable AI recommendations to empower marketing managers and executives with data-driven decision making capabilities.
+
+Business Outcome: Reduce brand monitoring time by 80%, increase response speed to brand issues by 300%, and provide actionable insights that drive measurable improvements in brand health metrics.
+
+❗ Problem Statement
+Marketing teams currently struggle with:
+
+Fragmented Data: Brand metrics scattered across 5+ platforms requiring manual aggregation (10+ hours/week)
+
+Reactive Monitoring: Issues discovered days/weeks after they occur, causing 40% more reputation damage
+
+Unclear Priorities: No unified scoring system to determine which brand issues need immediate attention
+
+Action Paralysis: Insights without clear, prioritized next steps result in 60% of identified opportunities going unaddressed
+
+✅ Solution Overview
+High-level Architecture: Next.js 15 + Supabase + shadcn/ui + Zustand + React Query + Chart.js
+
+Key Principles:
+
+Multi-tenant Architecture: Secure tenant isolation with RLS policies
+
+Real-time Updates: Live data synchronization via Supabase subscriptions
+
+Modular UI System: Reusable components for consistent UX
+
+AI-Powered Insights: Automated analysis with confidence scoring and recommended actions
+
+🛠️ Technical Architecture
+Data Layer
+Primary Tables/Views: The dashboard will primarily interact with three key database views:
+
+v_brand_health_scores: Calculates the overall brand health score for a given brand_id and tenant_id.
+
+v_generated_insights: Provides comprehensive brand metrics, including category, insight_title, insight_text, and insight_status.
+
+v_ai_insights_enriched: Contains AI-specific data, including insight_description, confidence_score, impact_score, and recommended_actions.
+
+Key Relationships: Data relationships are critical for correct filtering and joins.
+
+brands.id is linked to v_brand_health_scores.brand_id and
+
+brand_insights_dashboard.brand_id.
+
+tenants.id is linked to v_ai_insights_enriched.tenant_id.
+
+API Layer Architecture
+ 
+
+Service Classes: A centralized BrandHealthService class will handle all data fetching from Supabase.
+
+ 
+
+
+
+// services/brand-health-service.ts
+import { supabase } from '@/lib/supabase/client';
+export const BrandHealthService = {
+  fetchBrandHealthScore: async (brandId: string, tenantId: string) => {
+    const { data, error } = await supabase
+      .from('v_brand_health_scores')
+      .select('brand_health_score, calculation_date')
+      .eq('brand_id', brandId)
+      .eq('tenant_id', tenantId)
+      .order('calculation_date', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    return data[0];
+  },
+  fetchInsightsByCategory: async (brandId: string, category: string) => {
+    const { data, error } = await supabase
+      .from('brand_insights_dashboard')
+      .select('*')
+      .eq('brand_id', brandId)
+      .eq('category', category)
+      .order('sort_order');
+    if (error) throw error;
+    return data;
+  },
+  fetchAIInsights: async (brandId: string, tenantId: string) => {
+    const { data, error } = await supabase
+      .from('v_ai_insights_enriched')
+      .select('insight_title, insight_description, confidence_score, impact_score, priority_display, recommended_actions, action_status, created_at, expires_at')
+      .eq('brand_id', brandId)
+      .eq('tenant_id', tenantId)
+      .order('composite_score', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+};
+Caching Strategy: TanStack Query will be used for caching, with a staleTime of 0 to ensure a fresh fetch on every page load. The manual refresh button will use queryClient.invalidateQueries to bypass the cache and trigger a new fetch.
+
+Real-time Updates: Real-time subscriptions are not needed in this version. Instead, a "Last Refreshed" timestamp and a manual refresh button will be implemented
+
+
+
+
+Brand Health Dashboard - Detailed File Structure
+
+
+apps/web/
+├── app/workspace/brand-health/
+│   ├── page.tsx                    # Main dashboard page
+│   ├── loading.tsx                 # Loading UI
+│   ├── error.tsx                   # Error boundary
+│├── app/workspace/components/brand-health/
+│  ├── BrandHealthDashboard.tsx    # Main dashboard component
+│  ├── BrandScoreCard.tsx          # Circular progress score
+│  ├── InsightCard.tsx             # Category insight cards
+│  ├── AIActionCard.tsx            # Individual action items
+│  ├── ActionContextMenu.tsx       # Dropdown menu
+packages\hooks/src/brand-health/
+│   ├── useBrandHealthScore.ts
+│   ├── useInsightsByCategory.ts
+│   └── useAIInsights.ts
+│   ├── types/
+│   │   ├── brand-health.types.ts       # Core interfaces
+│   └── utils/
+├── components/ui/                      # Shared shadcn/ui components
+│   ├── button.tsx
+│   ├── badge.tsx
+│   ├── card.tsx
+│   ├── progress.tsx
+│   ├── dropdown-menu.tsx
+│   ├── checkbox.tsx
+│   └── skeleton.tsx
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts                   # Supabase client setup
+│   │   ├── queries.ts                  # Centralized queries
+│   │   └── types.ts                    # Database types
+│   ├── utils.ts                        # General utilities
+│   ├── constants.ts                    # App constants
+│   └── validations.ts                  # Zod schemas
+Core UI Components (Built with shadcn/ui principles)
+image-20250827-121351.png
+<BrandScoreCard />
+ Left Panel – Brand Health Score Card
+Data Binding: brand_health_score from Supabase query.
+
+UI Components:
+
+Circular Progress Ring (binds to brand_health_score)
+
+Score shown in % with large text.
+
+Background: gradient (from-indigo-600 to-indigo-800).
+
+Header: "Overall Brand Health Score" (static text, reusable across brands).
+
+Props for Config: score, color, label → dynamic input.
+
+Purpose: A circular progress indicator to display the overall brand health score.
+
+Props Interface:
+
+
+
+interface BrandScoreCardProps {
+  score: number; // 0-100
+  isLoading?: boolean;
+  previousScore?: number;
+  size?: 'sm' | 'md' | 'lg';
+}
+AC:
+
+Displays a circular progress ring with an animated filling.
+
+The score is shown as a large percentage.
+
+The color of the ring changes based on the score: Green (80+), Yellow (50-79), and Red (<50).
+
+TC:
+
+Test Case: score prop is 85. Expected Outcome: The ring renders in Green.
+
+Test Case: isLoading prop is true.
+
+Expected Outcome: A skeleton loader is displayed.
+
+ 
+
+2. Top Right – Section Container (e.g. Awareness)
+<InsightCard />
+Purpose: To display a categorized list of brand metrics with visual indicators.
+
+Props Interface:
+
+
+
+interface InsightCardProps {
+  category: 'Awareness' | 'Consideration' | 'Trust & Credibility';
+  insights: InsightData[];
+  isExpanded?: boolean;
+}
+interface InsightData {
+  title: string;
+  value: string | number;
+  status: 'Good' | 'Needs Attention' | 'Critical';
+  trend?: 'up' | 'down' | 'stable';
+  description?: string;
+}
+AC:
+
+The header displays a dynamic icon based on the category.
+
+Each insight item displays a title, value, and a status badge (e.g., "Good", "At Risk").
+
+The card's theme color should match the category: Blue for Awareness, Green for Consideration, and Purple for Trust & Credibility.
+
+ 
+
+TC:
+
+Test Case: category is 'Awareness'. Expected Outcome: The card uses a Blue theme (#2563EB).
+
+Test Case: insight_status is 'Declining'. Expected Outcome: A "At Risk" badge is displayed.
+
+Data Binding: Flexible via categoryfield (e.g. "awareness", "consideration", "reputation").
+
+UI Components:
+
+Header with Icon: dynamic icon mapping → icon_map[metric_type].
+
+Metrics List: Array of {insight_title, insight_text, metric_value?} objects.
+
+Example:
+
+Branded Search Volume: 5000
+
+Social Reach: 14,000 (3.2% engagement)
+
+Competitor Comparison Block: Supabase relation table → competitor_metrics
+
+Show competitor_name, value, and highlight gaps.
+
+✅ Field-to-UI Mapping
+View Column
+
+UI Component / Behaviour
+
+category
+
+Section title (e.g. “Awareness”) with folder icon
+
+insight_title
+
+Metric title (e.g. “Branded Search Volume”)
+
+insight_text
+
+Short narrative (e.g. “~5K monthly searches (+120% YoY)”)
+
+metric_value
+
+Numeric visualization (clean typography, big number)
+
+insight_status
+
+Badge (e.g. Good / At Risk / Declining)
+
+report_date
+
+Latest snapshot date
+
+sort_order
+
+Controls order of metrics in UI
+
+image-20250827-161051.png
+ 
+
+image-20250827-161109.png
+ 
+
+image-20250827-161132.png
+ 
+
+image-20250827-161203.png
+AIActionCard
+
+Purpose: To display AI-powered insights and recommendations in an interactive card format.
+
+ 
+
+Props Interface:
+
+
+
+interface AIActionCardProps {
+  insight: {
+    title: string;
+    description: string;
+    confidenceScore: number;
+    impactScore: number;
+    priority: 'HIGH' | 'MEDIUM' | 'LOW';
+    actions: string[];
+    status: 'new' | 'viewed' | 'in-progress' | 'completed';
+  };
+}
+AC:
+
+Displays the insight title, description, and status badge.
+
+Renders a confidence bar that corresponds to the confidenceScore.
+
+Highlights urgent actions with a specific red icon or "Urgent" label if
+
+requires_immediate_action is true.
+
+TC:
+
+Test Case: confidenceScore is 95. Expected Outcome: The confidence bar is nearly full.
+
+Test Case: priority is 'HIGH'. Expected Outcome: The card is sorted higher in the UI (due to composite_score sorting) and a clear priority tag is visible.
+
+✅ Field-to-UI Mapping
+View Column
+
+UI Component / Behavior
+
+insight_title
+
+Action Title (bold, top line)
+
+insight_description
+
+Action detail / explanation
+
+platform
+
+Small badge (Twitter, IG, Web, etc.)
+
+confidence_score
+
+Numeric → Progress Bar (%)
+
+impact_score
+
+Enum → "High" (red), "Medium" (orange), "Low" (green)
+
+priority_display
+
+Star toggle / Priority tag
+
+stage_display
+
+Status Badge → "New", "Viewed", "In Progress", "Actioned"
+
+recommended_actions
+
+Expandable list / sub-actions checklist
+
+top_action
+
+Highlighted suggested action (short CTA line)
+
+composite_score
+
+Used for sorting (higher score → higher card order)
+
+requires_immediate_action
+
+Red ⚠️ icon or "Urgent" label if true
+
+viewed_at / viewed_by
+
+Track who interacted → optionally display avatar/icon
+
+actioned_at / actioned_by
+
+Show timeline badge (e.g. ✅ Actioned 3d ago by John Doe)
+
+expires_at / expiry_status
+
+Show "Expiring in X days" or "Expired" label
+
+Brand Insights Dashboard | Claude 
+
+image-20250827-160511.png
+image-20250827-162930.png
+Implementation Examples
+Service Layer
+(See BrandHealthService implementation under API Layer Architecture above).
+
+Custom Hooks
+useBrandHealthScore: Fetches and caches the overall brand health score.
+
+
+
+// packages/hooks/src/brand-health/api/useBrandHealthScore.ts
+import { useQuery } from '@tanstack/react-query';
+import { BrandHealthService } from '@/services/brand-health-service';
+export const useBrandHealthScore = (brandId: string, tenantId: string) => {
+  return useQuery({
+    queryKey: ['brand-health-score', brandId],
+    queryFn: () => BrandHealthService.fetchBrandHealthScore(brandId, tenantId),
+    staleTime: 0,
+    enabled: !!brandId && !!tenantId,
+  });
+};
+useAIInsights: Fetches and caches AI-powered insights.
+
+
+
+// packages/hooks/src/brand-health/api/useAIInsights.ts
+import { useQuery } from '@tanstack/react-query';
+import { BrandHealthService } from '@/services/brand-health-service';
+export const useAIInsights = (brandId: string, tenantId: string) => {
+  return useQuery({
+    queryKey: ['ai-insights', brandId],
+    queryFn: () => BrandHealthService.fetchAIInsights(brandId, tenantId),
+    staleTime: 0,
+    enabled: !!brandId,
+  });
+};
+ 
+
+Data Layer
+Primary Views:
+
+sql
+
+
+
+-- Brand health score calculation
+v_brand_health_scores: brand_id, tenant_id, brand_health_score, calculation_date
+-- Comprehensive insights dashboard
+v_generated_insights: category, insight_title, insight_text, metric_value, insight_status
+-- Enriched AI insights with actions
+v_ai_insights_enriched: insight_title, insight_description, confidence_score, 
+                       impact_score, priority_display, recommended_actions, 
+                       action_status, created_at, expires_at
+Key Relationships:
+
+
+
+v_generated_insights.brand_id → brands.id
+v_ai_insights_enriched.tenant_id → tenants.id  
+v_brand_health_scores.brand_id → brands.id
+🧮 Business Logic & Validation
+Score Calculation:
+
+Part of Supabase Flow
+
+Validation Schemas:
+
+typescript
+
+
+
+// lib/validations/insight-schema.ts
+import { z } from 'zod';
+export const insightSchema = z.object({
+  title: z.string().min(1).max(100),
+  description: z.string().min(10).max(500),
+  confidenceScore: z.number().min(0).max(100),
+  impactScore: z.number().min(0).max(100),
+  priority: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+  recommended_actions: z.array(z.string()).min(1),
+});
+🗂 State Management (Zustand + React Query)
+Global Store Interface
+ 
+
+The global Zustand store,
+
+useBrandHealthStore, will manage the UI state.
+
+ 
+
+
+
+interface BrandHealthStore {
+  selectedBrand: string | null;
+  activeCategory: 'Awareness' | 'Consideration' | 'Trust & Credibility' | 'AI Actions';
+  filters: {
+    priority: string[];
+    status: string[];
+  };
+  // Actions
+  setSelectedBrand: (brandId: string) => void;
+  setActiveCategory: (category: string) => void;
+  updateFilters: (filters: Partial<Filters>) => void;
+}
+⚡ 
+Performance & Optimization Specs
+Loading States: Skeleton loaders will be used for all components during initial data fetch.
+
+Caching: Caching is not used for this version as staleTime is set to 0.
+
+Code Splitting: Dynamic imports will be used for insight detail modals.
+
+Responsive Design:
+
+Desktop (≥1280px): 3-column insight layout.
+
+Tablet (768px-1279px): 2-column layout.
+
+Mobile (<768px): Single column with stacked cards.
+
+🔒 Multi-Tenancy & Security
+Data Isolation: All queries must include a filter on the tenant_id column. Supabase's RLS policies will enforce this at the database level, ensuring users can only see their own data.
+
+User Permissions: While this is a read-only view, future roles can be implemented to restrict access to certain insight categories.
+
+❌ Error Handling
+Network Errors: An API fetch error will trigger a retry mechanism with exponential backoff for a maximum of three attempts.
+
+Data Validation: Zod schemas will be used to validate API responses.
+
+Permission Errors: A clear "Permission Denied" message will be displayed if a user attempts to access unauthorized data.
+
+Stale Data: A "Last Refreshed" timestamp and a manual refresh button will be used instead of a stale data visual indicator.
+
+🧭 Navigation & User Flow
+typescript
+
+
+
+const navigationStructure = [
+  { label: 'Dashboard', href: '/workspace/brand-health/dashboard', icon: 'BarChart3' },
+];
+User Flow:
+Dashboard Load: The user logs in and navigates to /workspace/brand-health/dashboard.
+
+Data Fetching: The useBrandHealthScore and useAIInsights hooks fetch data from Supabase.
+
+UI Render: The dashboard renders with all the data, displaying the score card, categorized metrics, and AI insights.
+
+Manual Refresh: The user can click the "Refresh" button at any time to manually refetch the latest data from the database. A "Last Refreshed" timestamp will update accordingly.
+
+brand_health_score : 
+create view public.v_brand_health_scores as
+select
+  gen_random_uuid () as id,
+  b.id as brand_id,
+  b.tenant_id,
+  CURRENT_DATE as calculation_date,
+  calculate_sentiment_score (
+    b.id,
+    CURRENT_DATE,
+    cfg.min_mentions_for_sentiment
+  ) as sentiment_score,
+  calculate_engagement_rate_score (b.id, CURRENT_DATE, cfg.lookback_days) as engagement_rate_score,
+  calculate_reach_score (b.id, CURRENT_DATE, cfg.lookback_days) as reach_score,
+  calculate_mentions_velocity_score (b.id, CURRENT_DATE) as mentions_velocity_score,
+  (
+    select
+      COALESCE(
+        (
+          upm.total_comments + upm.total_likes + upm.total_shares + upm.total_saves
+        )::numeric,
+        0::numeric
+      ) as "coalesce"
+    from
+      unified_performance_metrics upm
+    where
+      upm.brand_id = b.id
+      and upm.metric_date = CURRENT_DATE
+    limit
+      1
+  ) as engagement_volume_score,
+  COALESCE(
+    calculate_sentiment_score (
+      b.id,
+      CURRENT_DATE,
+      cfg.min_mentions_for_sentiment
+    ),
+    0::numeric
+  ) * (cfg.sentiment_weight / 100.0) + COALESCE(
+    calculate_engagement_rate_score (b.id, CURRENT_DATE, cfg.lookback_days),
+    0::numeric
+  ) * (cfg.engagement_rate_weight / 100.0) + COALESCE(
+    calculate_reach_score (b.id, CURRENT_DATE, cfg.lookback_days),
+    0::numeric
+  ) * (cfg.reach_weight / 100.0) + COALESCE(
+    calculate_mentions_velocity_score (b.id, CURRENT_DATE),
+    0::numeric
+  ) * (cfg.mentions_velocity_weight / 100.0) + COALESCE(
+    (
+      select
+        (
+          upm.total_comments + upm.total_likes + upm.total_shares + upm.total_saves
+        )::numeric as "numeric"
+      from
+        unified_performance_metrics upm
+      where
+        upm.brand_id = b.id
+        and upm.metric_date = CURRENT_DATE
+      limit
+        1
+    ),
+    0::numeric
+  ) * (cfg.engagement_volume_weight / 100.0) as brand_health_score,
+  5 as components_calculated,
+  '{}'::jsonb as calculation_metadata,
+  now() as created_at
+from
+  brands b
+  join brand_health_config cfg on cfg.brand_id = b.id
+  and cfg.tenant_id = b.tenant_id
+  and cfg.is_active = true;
+
+  v_generated_insights:
+  create view public.v_generated_insights as
+with
+  metric_with_comparisons as (
+    select
+      fmv.metric_type,
+      fmv.platform,
+      fmv.brand_id,
+      fmv.tenant_id,
+      fmv.value as current_value,
+      fmv.date_id,
+      lag(fmv.value) over (
+        partition by
+          fmv.metric_type,
+          fmv.platform,
+          fmv.brand_id
+        order by
+          fmv.date_id
+      ) as previous_year_value,
+      case
+        when lag(fmv.value) over (
+          partition by
+            fmv.metric_type,
+            fmv.platform,
+            fmv.brand_id
+          order by
+            fmv.date_id
+        ) > 0::numeric then round(
+          (
+            fmv.value - lag(fmv.value) over (
+              partition by
+                fmv.metric_type,
+                fmv.platform,
+                fmv.brand_id
+              order by
+                fmv.date_id
+            )
+          ) / lag(fmv.value) over (
+            partition by
+              fmv.metric_type,
+              fmv.platform,
+              fmv.brand_id
+            order by
+              fmv.date_id
+          ) * 100::numeric,
+          1
+        )
+        else 0::numeric
+      end as yoy_change_percent
+    from
+      fact_metric_value_v1 fmv
+    where
+      fmv.date_id = (
+        (
+          select
+            max(fact_metric_value_v1.date_id) as max
+          from
+            fact_metric_value_v1
+        )
+      )
+  ),
+  formatted_insights as (
+    select
+      mwc.metric_type,
+      mwc.platform,
+      mwc.brand_id,
+      mwc.tenant_id,
+      mwc.current_value,
+      mwc.date_id,
+      mwc.previous_year_value,
+      mwc.yoy_change_percent,
+      isc.category,
+      isc.insight_title_template as insight_title,
+      case isc.value_format_type
+        when 'abbreviated'::text then case
+          when mwc.current_value >= 1000000::numeric then round(mwc.current_value / 1000000.0, 1) || 'M'::text
+          when mwc.current_value >= 1000::numeric then round(mwc.current_value / 1000.0, 1) || 'K'::text
+          else mwc.current_value::text
+        end
+        when 'currency'::text then '$'::text || to_char(mwc.current_value, 'FM999,999,999'::text)
+        when 'percentage'::text then round(mwc.current_value, isc.decimal_places) || '%'::text
+        else round(mwc.current_value, isc.decimal_places)::text
+      end as formatted_value,
+      case
+        when mwc.current_value >= COALESCE(
+          ((isc.status_thresholds ->> 'good'::text)::jsonb) ->> 'min'::text,
+          '0'::text
+        )::numeric then 'Good'::text
+        when mwc.current_value <= COALESCE(
+          (
+            (isc.status_thresholds ->> 'critical'::text)::jsonb
+          ) ->> 'max'::text,
+          '0'::text
+        )::numeric then 'Critical'::text
+        else 'Needs Attention'::text
+      end as insight_status,
+      replace(
+        replace(
+          replace(
+            replace(
+              replace(
+                isc.insight_text_template,
+                '{insight_title}'::text,
+                isc.insight_title_template::text
+              ),
+              '{formatted_value}'::text,
+              case isc.value_format_type
+                when 'abbreviated'::text then case
+                  when mwc.current_value >= 1000000::numeric then round(mwc.current_value / 1000000.0, 1) || 'M'::text
+                  when mwc.current_value >= 1000::numeric then round(mwc.current_value / 1000.0, 1) || 'K'::text
+                  else mwc.current_value::text
+                end
+                when 'currency'::text then '$'::text || to_char(mwc.current_value, 'FM999,999,999'::text)
+                else round(mwc.current_value, isc.decimal_places)::text
+              end
+            ),
+            '{unit}'::text,
+            isc.value_unit::text
+          ),
+          '{yoy_change}'::text,
+          COALESCE(mwc.yoy_change_percent::text, '0'::text)
+        ),
+        '{change_indicator}'::text,
+        case
+          when COALESCE(mwc.yoy_change_percent, 0::numeric) > 0::numeric then '+'::text
+          when COALESCE(mwc.yoy_change_percent, 0::numeric) < 0::numeric then ''::text
+          else ''::text
+        end
+      ) as insight_text,
+      isc.display_order
+    from
+      metric_with_comparisons mwc
+      join insight_statement_config isc on mwc.metric_type = isc.metric_type
+      and (
+        isc.platform is null
+        or mwc.platform = isc.platform
+      )
+      and isc.is_active = true
+  )
+select
+  brand_id,
+  tenant_id,
+  category,
+  insight_title,
+  insight_text,
+  current_value as metric_value,
+  insight_status,
+  yoy_change_percent,
+  display_order
+from
+  formatted_insights
+order by
+  category,
+  display_order,
+  insight_title;
+
+  v_ai_insights_enriched:
+  create view public.v_ai_insights_enriched as
+select
+  ai.id,
+  ai.tenant_id,
+  ai.brand_id,
+  ai.date_id,
+  ai.okr_objective_id,
+  b.name,
+  d.date,
+  ai.insight_type,
+  ai.insight_category,
+  ai.insight_title,
+  ai.insight_description,
+  ai.platform,
+  ai.confidence_score,
+  ai.impact_score,
+  case
+    when ai.impact_score >= 8
+    and ai.confidence_score >= 0.8 then 'CRITICAL PRIORITY'::text
+    when ai.impact_score >= 8 then 'HIGH PRIORITY'::text
+    when ai.impact_score >= 6 then 'MEDIUM PRIORITY'::text
+    else 'LOW PRIORITY'::text
+  end as priority_display,
+  concat(
+    round(ai.confidence_score * 100::numeric),
+    '% confidence'
+  ) as confidence_display,
+  case
+    when ai.percentage_change > 20::numeric then '↑↑'::text
+    when ai.percentage_change > 0::numeric then '↑'::text
+    when ai.percentage_change < '-20'::integer::numeric then '↓↓'::text
+    when ai.percentage_change < 0::numeric then '↓'::text
+    else '→'::text
+  end as trend_indicator,
+  ai.recommended_actions,
+  ai.data_points,
+  jsonb_array_length(ai.recommended_actions) as action_count,
+  ai.recommended_actions -> 0 as top_action,
+  ai.stage,
+  case ai.stage
+    when 'new'::text then 'New Insight'::text
+    when 'viewed'::text then 'Viewed'::text
+    when 'saved'::text then 'Saved for Later'::text
+    when 'selected_for_action'::text then 'Selected'::text
+    when 'in_progress'::text then 'In Progress'::text
+    when 'actioned'::text then 'Completed'::text
+    else null::text
+  end as stage_display,
+  ai.viewed_at,
+  ai.viewed_by,
+  uv.email as viewed_by_email,
+  ai.saved_at,
+  ai.saved_by,
+  us.email as saved_by_email,
+  ai.actioned_at,
+  ai.actioned_by,
+  ua.email as actioned_by_email,
+  ai.created_at,
+  ai.expires_at,
+  EXTRACT(
+    day
+    from
+      now() - ai.created_at
+  ) as days_old,
+  case
+    when ai.created_at > (now() - '1 day'::interval) then 'Today'::text
+    when ai.created_at > (now() - '7 days'::interval) then 'This Week'::text
+    when ai.created_at > (now() - '30 days'::interval) then 'This Month'::text
+    else 'Older'::text
+  end as age_group,
+  case
+    when ai.expires_at is null then 'No Expiry'::text
+    when ai.expires_at > now() then 'Active'::text
+    else 'Expired'::text
+  end as expiry_status,
+  case
+    when ai.expires_at is not null then EXTRACT(
+      day
+      from
+        ai.expires_at - now()
+    )
+    else null::numeric
+  end as days_until_expiry,
+  ai.impact_score::numeric * COALESCE(ai.confidence_score, 0.5) * 10::numeric as composite_score,
+  case
+    when ai.stage::text = 'actioned'::text then 'Completed'::text
+    when ai.stage::text = 'selected_for_action'::text then 'Selected for Action'::text
+    when ai.stage::text = 'in_progress'::text then 'In Progress'::text
+    when ai.saved_at is not null then 'Saved'::text
+    when ai.viewed_at is not null then 'Viewed'::text
+    else 'Unread'::text
+  end as action_status,
+  case
+    when (
+      ai.expires_at is null
+      or ai.expires_at > now()
+    )
+    and ai.stage::text <> 'actioned'::text then true
+    else false
+  end as is_active,
+  case
+    when ai.impact_score >= 8
+    and (
+      ai.stage::text = any (
+        array[
+          'new'::character varying,
+          'viewed'::character varying
+        ]::text[]
+      )
+    )
+    and (
+      ai.expires_at is null
+      or ai.expires_at > now()
+    ) then true
+    else false
+  end as requires_immediate_action
+from
+  ai_insights ai
+  left join brands b on ai.brand_id = b.id
+  left join dim_date_v1 d on ai.date_id = d.date_id
+  left join auth.users uv on ai.viewed_by = uv.id
+  left join auth.users us on ai.saved_by = us.id
+  left join auth.users ua on ai.actioned_by = ua.id;
+
+  ai_insights
+  create table public.ai_insights (
+  id uuid not null default gen_random_uuid (),
+  tenant_id uuid not null,
+  brand_id uuid not null,
+  date_id integer null,
+  insight_type character varying(50) not null,
+  insight_category character varying(50) not null,
+  insight_title character varying(255) not null,
+  insight_description text not null,
+  confidence_score numeric(3, 2) null,
+  impact_score integer null,
+  recommended_actions jsonb null default '[]'::jsonb,
+  data_points jsonb null default '{}'::jsonb,
+  platform character varying(50) null,
+  baseline_value numeric null,
+  current_value numeric null,
+  percentage_change numeric null,
+  stage character varying(30) not null default 'new'::character varying,
+  viewed_at timestamp with time zone null,
+  viewed_by uuid null,
+  saved_at timestamp with time zone null,
+  saved_by uuid null,
+  actioned_at timestamp with time zone null,
+  actioned_by uuid null,
+  created_at timestamp with time zone null default now(),
+  expires_at timestamp with time zone null,
+  okr_objective_id uuid null,
+  constraint ai_insights_pkey primary key (id),
+  constraint ai_insights_brand_fkey foreign KEY (brand_id) references brands (id),
+  constraint ai_insights_date_fkey foreign KEY (date_id) references dim_date_v1 (date_id),
+  constraint ai_insights_viewed_by_fkey foreign KEY (viewed_by) references auth.users (id),
+  constraint ai_insights_saved_by_fkey foreign KEY (saved_by) references auth.users (id),
+  constraint ai_insights_tenant_fkey foreign KEY (tenant_id) references tenants (id),
+  constraint ai_insights_actioned_by_fkey foreign KEY (actioned_by) references auth.users (id),
+  constraint ai_insights_okr_fkey foreign KEY (okr_objective_id) references okr_objectives (id),
+  constraint ai_insights_impact_check check (
+    (
+      (impact_score >= 1)
+      and (impact_score <= 10)
+    )
+  ),
+  constraint ai_insights_stage_check check (
+    (
+      (stage)::text = any (
+        (
+          array[
+            'new'::character varying,
+            'viewed'::character varying,
+            'saved'::character varying,
+            'selected_for_action'::character varying,
+            'in_progress'::character varying,
+            'actioned'::character varying
+          ]
+        )::text[]
+      )
+    )
+  ),
+  constraint ai_insights_confidence_check check (
+    (
+      (confidence_score >= (0)::numeric)
+      and (confidence_score <= (1)::numeric)
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_insights_tenant_brand on public.ai_insights using btree (tenant_id, brand_id) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_insights_date on public.ai_insights using btree (date_id) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_insights_stage on public.ai_insights using btree (stage) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_insights_platform on public.ai_insights using btree (platform) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_insights_category on public.ai_insights using btree (insight_category) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_insights_created on public.ai_insights using btree (created_at desc) TABLESPACE pg_default;
+
+create index IF not exists idx_ai_insights_impact on public.ai_insights using btree (impact_score desc) TABLESPACE pg_default;
+
