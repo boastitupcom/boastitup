@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, MessageSquare, RefreshCw, Star, Heart, ThumbsDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, MessageSquare, RefreshCw, Star, Heart, ThumbsDown, Smile, Sparkles, Activity, Eye, Mic, Rocket, Compass } from 'lucide-react';
 
 // --- TYPE DEFINITIONS ---
 interface MentionData {
@@ -135,45 +135,69 @@ const BubbleChart = ({ data }) => {
   );
 };
 
-const BrandScoreHero = ({ score, change, data }) => {
-  const radius = 55;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
+const BrandHealthInsights = ({ score, insights, data }) => {
+  const getScoreColor = (score) => {
+    if (score >= 80) return '#10b981'; // green
+    if (score >= 60) return '#f59e0b'; // amber
+    return '#ef4444'; // red
+  };
+
+  const getStatusText = (score) => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    return 'Needs Attention';
+  };
 
   return (
-    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/50 shadow-lg mb-8 flex items-center justify-between flex-wrap">
-      <div className="flex items-center gap-6">
-        <div className="relative w-32 h-32">
-          <svg className="w-full h-full" viewBox="0 0 120 120">
-            <circle stroke="#e5e7eb" strokeWidth="8" fill="transparent" r={radius} cx="60" cy="60" />
-            <circle
-              stroke="#059669" // emerald-600
-              strokeWidth="8"
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-              fill="transparent"
-              r={radius}
-              cx="60"
-              cy="60"
-              transform="rotate(-90 60 60)"
-              className="transition-all duration-1000 ease-out"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold text-slate-800">{score}%</span>
-            <div className="flex items-center text-green-600">
-              <TrendingUp className="w-4 h-4" />
-              <span className="text-sm font-semibold">+{change}%</span>
+    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-slate-200/50 shadow-lg mb-8">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-8 mb-6">
+        {/* Brand Health Ring & Score */}
+        <div className="flex flex-col items-center justify-center p-4">
+          <div className="relative w-40 h-40 flex items-center justify-center">
+            <svg className="w-full h-full" viewBox="0 0 160 160">
+              <circle stroke="#e5e7eb" strokeWidth="8" fill="transparent" r="70" cx="80" cy="80" />
+              <circle
+                stroke={getScoreColor(score)}
+                strokeWidth="8"
+                strokeDasharray={2 * Math.PI * 70}
+                strokeDashoffset={2 * Math.PI * 70 - (score / 100) * (2 * Math.PI * 70)}
+                strokeLinecap="round"
+                fill="transparent"
+                r="70"
+                cx="80"
+                cy="80"
+                transform="rotate(-90 80 80)"
+                className="transition-all duration-1000 ease-out"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-4xl font-bold text-slate-800">{score}%</span>
+              <span className="text-md text-slate-500 font-semibold">{getStatusText(score)}</span>
             </div>
           </div>
+          <h2 className="text-xl font-bold text-slate-800 mt-4 text-center">Your Brand Health</h2>
+          <p className="text-slate-600 text-sm text-center">A comprehensive view of your brand's standing.</p>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Excellent Brand Score</h2>
-          <p className="text-slate-600">Based on overall positive sentiment and volume.</p>
+
+        {/* Score Breakdown Section */}
+        <div className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+          {insights.map(insight => (
+            <div key={insight.title} className="bg-slate-50/70 rounded-xl p-5 border border-slate-200/50 flex flex-col items-start hover:shadow-lg transition-shadow duration-300">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${insight.color}1A` }}>
+                  {React.createElement(insight.icon, { className: `w-5 h-5`} )}
+                </div>
+                <h3 className="text-sm font-bold text-slate-800">{insight.title}</h3>
+              </div>
+              <p className="text-slate-600 text-sm mb-2">{insight.description}</p>
+              <div className="flex items-center text-xs text-slate-500 font-medium">
+                <span className="text-xs mr-1" style={{ color: insight.color }}>{insight.score}%</span> contribution
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-      <div className="w-64 h-20">
+      <div className="w-full h-24">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <Tooltip
@@ -185,19 +209,89 @@ const BrandScoreHero = ({ score, change, data }) => {
               labelFormatter={() => ''}
               formatter={(value) => [`${value}%`, 'Score']}
             />
-            <Line type="monotone" dataKey="score" stroke="#059669" strokeWidth={2.5} dot={false} />
+            <Line type="monotone" dataKey="score" stroke={getScoreColor(score)} strokeWidth={2.5} dot={false} />
           </LineChart>
         </ResponsiveContainer>
-        <p className="text-center text-xs text-slate-500 font-medium">5-day outlook</p>
+        <p className="text-center text-xs text-slate-500 font-medium mt-1">5-day outlook</p>
       </div>
     </div>
   );
+};
+
+// This function would ideally fetch real-time data from your Supabase DB.
+// For this example, it uses mock data to demonstrate the concept.
+const getBrandHealthInsights = (sentimentWeight: number, engagementWeight: number, reachWeight: number, mentionsWeight: number) => {
+  // Mock data for each metric
+  const mockSentimentScore = 90;
+  const mockEngagementScore = 85;
+  const mockMentionsScore = 95;
+  const mockReachScore = 80;
+
+  // Calculate the weighted score
+  const totalWeight = sentimentWeight + engagementWeight + reachWeight + mentionsWeight;
+  const weightedScore = (
+    (mockSentimentScore * sentimentWeight) +
+    (mockEngagementScore * engagementWeight) +
+    (mockMentionsScore * mentionsWeight) +
+    (mockReachScore * reachWeight)
+  ) / totalWeight;
+
+  return {
+    score: Math.round(weightedScore),
+    change: 2.1, // This can also be dynamic
+    insights: [
+      {
+        title: 'Sentiment Score',
+        score: mockSentimentScore,
+        description: `Your brand's positive sentiment is incredibly strong, showing your audience loves what you're doing.`,
+        icon: Heart,
+        color: '#10b981' // green
+      },
+      {
+        title: 'Engagement',
+        score: mockEngagementScore,
+        description: `High engagement means your content is truly resonating. Your community is active and connected.`,
+        icon: Sparkles,
+        color: '#f59e0b' // amber
+      },
+      {
+        title: 'Mentions Velocity',
+        score: mockMentionsScore,
+        description: `The number of mentions is growing rapidly, indicating your brand is gaining significant traction online.`,
+        icon: Rocket,
+        color: '#3b82f6' // blue
+      },
+      {
+        title: 'Reach',
+        score: mockReachScore,
+        description: `Your content is reaching a wide and diverse audience, expanding your brand's footprint effortlessly.`,
+        icon: Compass,
+        color: '#a855f7' // purple
+      },
+    ]
+  };
 };
 
 // --- MAIN DASHBOARD COMPONENT ---
 const BrandMentionsDashboardSME = () => {
   const [weeklyData, setWeeklyData] = useState<MentionData[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Hardcoded weights based on the brand_health_config table in your schema
+  const brandHealthWeights = {
+    sentiment: 30,
+    engagement: 20,
+    reach: 15,
+    mentions: 15,
+  };
+
+  const { score, insights, change } = getBrandHealthInsights(
+    brandHealthWeights.sentiment,
+    brandHealthWeights.engagement,
+    brandHealthWeights.reach,
+    brandHealthWeights.mentions
+  );
+
 
   useEffect(() => {
     setTimeout(() => {
@@ -256,7 +350,7 @@ const BrandMentionsDashboardSME = () => {
         </header>
 
         {/* Hero Row: Brand Score */}
-        <BrandScoreHero score={94.2} change={2.1} data={brandScoreData} />
+        <BrandHealthInsights score={score} insights={insights} data={brandScoreData} />
 
         {/* Main 4x4 Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

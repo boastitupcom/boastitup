@@ -29,28 +29,34 @@ export async function GET(request: NextRequest) {
 
     console.log('Fetching OKR data for brand:', brandId, 'tenant:', tenantId);
 
-    // Query the mv_okr_performance materialized view with brand and tenant context
+    // Query okr_objectives table directly according to story.txt schema
     const { data: okrData, error: okrError } = await supabase
-      .from('mv_okr_performance')
+      .from('okr_objectives')
       .select(`
-        objective_id,
+        id,
         tenant_id,
         brand_id,
         title,
         description,
         target_value,
-        target_date,
-        metric_code,
-        metric_description,
-        metric_unit,
-        current_value,
-        progress_percentage,
-        variance,
-        days_remaining,
-        status,
-        confidence_score,
-        last_metric_date,
-        created_at
+        target_date_id,
+        granularity,
+        is_active,
+        created_at,
+        updated_at,
+        master_template_id,
+        dim_metric_type!inner(
+          id,
+          code,
+          description,
+          unit,
+          category
+        ),
+        brands!inner(
+          id,
+          name,
+          tenant_id
+        )
       `)
       .eq('brand_id', brandId)
       .eq('tenant_id', tenantId)
@@ -64,24 +70,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Transform data from mv_okr_performance to client format
+    // Transform data from okr_objectives to client format
     const transformedData = (okrData || []).map(item => ({
-      id: item.objective_id,
-      title: item.title || getMetricTitle(item.metric_code),
-      description: item.description || getMetricDescription(item.metric_code),
-      current_value: item.current_value,
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      current_value: 0, // Default current value - will be updated via metrics tracking
       target_value: item.target_value,
-      progress_percentage: item.progress_percentage,
-      status: item.status, // Use the calculated status from the view
-      confidence_score: item.confidence_score,
-      days_remaining: item.days_remaining,
-      change_amount: item.variance, // Using variance as change amount
-      change_percentage: calculateChangePercentage(item.current_value, item.variance),
-      icon: getIconForMetricCode(item.metric_code),
-      metric_type: getMetricTypeFromCode(item.metric_code),
-      unit_type: item.metric_unit || getUnitTypeFromCode(item.metric_code),
-      target_date: item.target_date,
-      color: getMetricColor(item.metric_code),
+      progress_percentage: 0, // Calculate based on current/target when metrics are available
+      status: item.is_active ? 'active' : 'inactive',
+      confidence_score: 0.75, // Default confidence score
+      days_remaining: calculateDaysRemaining(item.target_date_id),
+      change_amount: 0, // Will be calculated from metrics data
+      change_percentage: 0, // Will be calculated from metrics data
+      icon: getIconForMetricCode(item.dim_metric_type?.code || ''),
+      metric_type: getMetricTypeFromCode(item.dim_metric_type?.code || ''),
+      unit_type: item.dim_metric_type?.unit || 'count',
+      target_date: item.target_date_id,
+      color: getMetricColor(item.dim_metric_type?.code || ''),
+      granularity: item.granularity,
+      master_template_id: item.master_template_id,
+      brand_name: item.brands?.name,
+      is_active: item.is_active
     }));
 
     console.log('Successfully fetched OKR data:', transformedData.length, 'items');
@@ -175,6 +185,17 @@ function calculateChangePercentage(currentValue: number, changeValue: number): n
   return (changeValue / previousValue) * 100;
 }
 
+function calculateDaysRemaining(targetDateId: number | null): number {
+  if (!targetDateId) return 0;
+  // This would normally query dim_date table, for now return a default
+  const targetDate = new Date();
+  targetDate.setMonth(targetDate.getMonth() + 3); // Default 3 months
+  const today = new Date();
+  const diffTime = targetDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+}
+
 function getMetricColor(metricCode: string): string {
   const colorMap: Record<string, string> = {
     'monthly_revenue': 'blue',         // Blue for revenue/financial metrics
@@ -191,11 +212,11 @@ function getMetricColor(metricCode: string): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { organizationId, okrData } = body;
+    const { brandId, tenantId, okrData } = body;
     
-    if (!organizationId || !okrData) {
+    if (!brandId || !tenantId || !okrData) {
       return NextResponse.json(
-        { error: 'Organization ID and OKR data are required' },
+        { error: 'Brand ID, Tenant ID and OKR data are required' },
         { status: 400 }
       );
     }
@@ -212,11 +233,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert or update OKR objective
+    // Insert or update OKR objective according to story.txt schema
     const { data, error } = await supabase
       .from('okr_objectives')
       .upsert({
-        organization_id: organizationId,
+        brand_id: brandId,
+        tenant_id: tenantId,
         ...okrData,
         updated_at: new Date().toISOString(),
       })

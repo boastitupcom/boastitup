@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { Brand, BrandWithTenant, Tenant } from '@boastitup/types';
 import { useIndustryStore } from './industryStore';
+import { OKRTemplate, OKRCustomization, Industry } from '../types/okr-creation';
 
 // Multi-tenant support types with enhanced brand grouping
 interface TenantWithBrands extends Tenant {
@@ -19,6 +20,15 @@ interface BrandState {
   tenantBrands: Map<string, BrandWithTenant[]>;
   activeTenants: string[];
   
+  // OKR Creation State
+  okrCreation: {
+    selectedIndustry: Industry | null;
+    selectedTemplates: Map<string, OKRTemplate>;
+    customizations: Map<string, OKRCustomization>;
+    isCreating: boolean;
+    errors: string[];
+  };
+  
   // Basic setters
   setActiveBrand: (brand: BrandWithTenant | null) => void;
   setBrands: (brands: BrandWithTenant[]) => void;
@@ -34,6 +44,16 @@ interface BrandState {
   // Enhanced method to handle brand change and update industry
   handleBrandChange: (brand: BrandWithTenant | null) => void;
   
+  // OKR Creation State Management
+  setOKRIndustry: (industry: Industry | null) => void;
+  addOKRTemplate: (template: OKRTemplate) => void;
+  removeOKRTemplate: (templateId: string) => void;
+  updateOKRCustomization: (templateId: string, customization: Partial<OKRCustomization>) => void;
+  clearOKRCreation: () => void;
+  setOKRCreating: (isCreating: boolean) => void;
+  addOKRError: (error: string) => void;
+  clearOKRErrors: () => void;
+  
   // Debug methods (development only)
   getDebugInfo: () => {
     activeBrand: BrandWithTenant | null;
@@ -42,6 +62,8 @@ interface BrandState {
     totalTenants: number;
     brandsByTenant: Record<string, number>;
     activeTenants: string[];
+    okrTemplatesSelected: number;
+    okrCustomizations: number;
   };
 }
 
@@ -55,6 +77,15 @@ export const useBrandStore = create<BrandState>((set, get) => ({
   tenants: [],
   tenantBrands: new Map(),
   activeTenants: [],
+  
+  // OKR Creation State
+  okrCreation: {
+    selectedIndustry: null,
+    selectedTemplates: new Map(),
+    customizations: new Map(),
+    isCreating: false,
+    errors: []
+  },
   
   // Basic setters
   setActiveBrand: (brand) => set({ activeBrand: brand }),
@@ -108,6 +139,101 @@ export const useBrandStore = create<BrandState>((set, get) => ({
     }
   },
   
+  // OKR Creation State Management
+  setOKRIndustry: (industry) => set((state) => ({
+    okrCreation: {
+      ...state.okrCreation,
+      selectedIndustry: industry,
+      // Clear templates when industry changes
+      selectedTemplates: new Map(),
+      customizations: new Map()
+    }
+  })),
+
+  addOKRTemplate: (template) => set((state) => {
+    const newTemplates = new Map(state.okrCreation.selectedTemplates);
+    newTemplates.set(template.id, template);
+    
+    // Initialize customization for this template
+    const newCustomizations = new Map(state.okrCreation.customizations);
+    if (!newCustomizations.has(template.id)) {
+      newCustomizations.set(template.id, {
+        templateId: template.id,
+        title: template.title,
+        targetValue: template.suggestedTargetValue,
+        granularity: template.suggestedTimeframe === 'quarterly' ? 'monthly' : template.suggestedTimeframe
+      });
+    }
+    
+    return {
+      okrCreation: {
+        ...state.okrCreation,
+        selectedTemplates: newTemplates,
+        customizations: newCustomizations
+      }
+    };
+  }),
+
+  removeOKRTemplate: (templateId) => set((state) => {
+    const newTemplates = new Map(state.okrCreation.selectedTemplates);
+    newTemplates.delete(templateId);
+    
+    const newCustomizations = new Map(state.okrCreation.customizations);
+    newCustomizations.delete(templateId);
+    
+    return {
+      okrCreation: {
+        ...state.okrCreation,
+        selectedTemplates: newTemplates,
+        customizations: newCustomizations
+      }
+    };
+  }),
+
+  updateOKRCustomization: (templateId, customization) => set((state) => {
+    const newCustomizations = new Map(state.okrCreation.customizations);
+    const existing = newCustomizations.get(templateId) || { templateId };
+    newCustomizations.set(templateId, { ...existing, ...customization });
+    
+    return {
+      okrCreation: {
+        ...state.okrCreation,
+        customizations: newCustomizations
+      }
+    };
+  }),
+
+  clearOKRCreation: () => set((state) => ({
+    okrCreation: {
+      selectedIndustry: null,
+      selectedTemplates: new Map(),
+      customizations: new Map(),
+      isCreating: false,
+      errors: []
+    }
+  })),
+
+  setOKRCreating: (isCreating) => set((state) => ({
+    okrCreation: {
+      ...state.okrCreation,
+      isCreating
+    }
+  })),
+
+  addOKRError: (error) => set((state) => ({
+    okrCreation: {
+      ...state.okrCreation,
+      errors: [...state.okrCreation.errors, error]
+    }
+  })),
+
+  clearOKRErrors: () => set((state) => ({
+    okrCreation: {
+      ...state.okrCreation,
+      errors: []
+    }
+  })),
+
   // Debug method (development only)
   getDebugInfo: () => {
     const state = get();
@@ -124,6 +250,8 @@ export const useBrandStore = create<BrandState>((set, get) => ({
       totalTenants: state.tenants.length,
       brandsByTenant,
       activeTenants: state.activeTenants,
+      okrTemplatesSelected: state.okrCreation.selectedTemplates.size,
+      okrCustomizations: state.okrCreation.customizations.size,
     };
   },
 }));

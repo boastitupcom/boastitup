@@ -6,7 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "validate-okr-mapping": "node scripts/validate-okr-industry-mapping.js"
   },
   "dependencies": {
     "@boastitup/hooks": "workspace:*",
@@ -43,12 +47,14 @@
     "react-window": "^1.8.8",
     "recharts": "^3.1.2",
     "sharp": "^0.33.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.1",
     "video.js": "^8.6.0",
     "videojs-contrib-quality-levels": "^4.0.0",
     "videojs-hls-quality-selector": "^1.1.4",
+    "zod": "^3.25.76",
     "zustand": "^4.5.0"
   },
   "peerDependencies": {

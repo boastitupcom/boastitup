@@ -11,5 +11,9 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "eslint": "^8.57.0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.84.2",
+    "zod": "^3.25.76"
   }
 }

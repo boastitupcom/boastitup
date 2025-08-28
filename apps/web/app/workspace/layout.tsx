@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@boastitup/supabase/server';
 import { redirect } from 'next/navigation';
 import Header from '@/components/Header';
 import { QueryProvider } from '@/components/providers/QueryProvider';
-import { ResponsiveSidebar } from '@/components/navigation/ResponsiveNavigation';
+import { ResponsiveSidebar } from '@/views/navigation/ResponsiveNavigation';
 
 export default async function WorkspaceLayout({
   children,
