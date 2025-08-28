@@ -48,6 +48,13 @@ import {
   TrendingDown
 } from 'lucide-react';
 
+// Custom chevron icons for better control
+const ChevronRightIcon = ({ className }: { className: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
+
 // ChevronLeft icon component
 const ChevronLeft = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,6 +74,44 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
+   {
+    label: 'Brand Health',
+    href: '/workspace/brand-health',
+    icon: Heart,
+    description: 'Holistic brand performance and reputation insights',
+    color: 'text-rose-600',
+    status: 'new',
+    children: [
+      {
+        label: 'Health Dashboard',
+        href: '/workspace/brand-health/dashboard',
+        icon: BarChart2,
+        description: 'Unified brand performance overview',
+        color: 'text-blue-600'
+      },
+      {
+        label: 'Reputation Monitor',
+        href: '/workspace/brand-health/reputation',
+        icon: Search,
+        description: 'Real-time brand sentiment tracking',
+        color: 'text-green-600'
+      },
+      {
+        label: 'Competitor Analysis',
+        href: '/workspace/brand-health/competitors',
+        icon: Target,
+        description: 'Brand positioning vs competition',
+        color: 'text-purple-600'
+      },
+      {
+        label: 'AI Recommendations',
+        href: '/workspace/brand-health/recommendations',
+        icon: Brain,
+        description: 'Actionable AI-driven insights',
+        color: 'text-indigo-600'
+      }
+    ]
+  },
   {
     label: 'Quick Start',
     href: '/workspace/quickstart',
