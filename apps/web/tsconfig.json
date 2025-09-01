@@ -6,6 +6,7 @@
     "paths": {
       "@/lib/*": ["lib/*"],
       "@/components/*": ["components/*"],
+      "@/views/*": ["views/*"],
       "@boastitup/ui": ["../../packages/ui"],
       "@boastitup/hooks": ["../../packages/hooks"],
       "@boastitup/supabase/client": ["../../packages/supabase/client.ts"],
