@@ -20,11 +20,12 @@ export const useBrandHealthStore = create<BrandHealthStoreState>()(
     persist(
       (set, get) => ({
         // Initial state
-        selectedBrand: null,
-        activeCategory: 'Awareness',
+        selectedBrandId: null,
+        activeCategory: null,
         filters: {
           priority: [],
           status: [],
+          showExpiring: false,
         },
         lastRefreshed: undefined,
         isRefreshing: false,
@@ -34,11 +35,12 @@ export const useBrandHealthStore = create<BrandHealthStoreState>()(
           set(
             (state) => ({ 
               ...state, 
-              selectedBrand: brandId,
+              selectedBrandId: brandId,
               // Reset filters when switching brands
               filters: {
                 priority: [],
                 status: [],
+                showExpiring: false,
               },
             }),
             false,
@@ -46,7 +48,7 @@ export const useBrandHealthStore = create<BrandHealthStoreState>()(
           );
         },
 
-        setActiveCategory: (category: BrandHealthStoreState['activeCategory']) => {
+        setActiveCategory: (category: string) => {
           set(
             (state) => ({ ...state, activeCategory: category }),
             false,
@@ -92,6 +94,7 @@ export const useBrandHealthStore = create<BrandHealthStoreState>()(
               filters: {
                 priority: [],
                 status: [],
+                showExpiring: false,
               },
             }),
             false,
@@ -145,7 +148,7 @@ export const useBrandHealthStore = create<BrandHealthStoreState>()(
         name: 'brand-health-store',
         partialize: (state) => ({
           // Only persist certain parts of the state
-          selectedBrand: state.selectedBrand,
+          selectedBrandId: state.selectedBrandId,
           activeCategory: state.activeCategory,
           // Don't persist filters or refresh state
         }),
@@ -159,7 +162,7 @@ export const useBrandHealthStore = create<BrandHealthStoreState>()(
 );
 
 // Selector hooks for better performance
-export const useSelectedBrand = () => useBrandHealthStore(state => state.selectedBrand);
+export const useSelectedBrand = () => useBrandHealthStore(state => state.selectedBrandId);
 export const useActiveCategory = () => useBrandHealthStore(state => state.activeCategory);
 export const useFilters = () => useBrandHealthStore(state => state.filters);
 export const useLastRefreshed = () => useBrandHealthStore(state => state.lastRefreshed);
@@ -180,7 +183,9 @@ export const useBrandHealthActions = () => useBrandHealthStore(state => ({
 // Combined selectors for common use cases
 export const useCurrentFilters = () => {
   const filters = useFilters();
-  const hasActiveFilters = filters.priority.length > 0 || filters.status.length > 0;
+  const hasActiveFilters = filters.priority.length > 0 || 
+                           filters.status.length > 0 || 
+                           filters.showExpiring;
   
   return {
     ...filters,
@@ -189,16 +194,14 @@ export const useCurrentFilters = () => {
 };
 
 export const useDashboardState = () => {
-  const selectedBrand = useSelectedBrand();
+  const selectedBrandId = useSelectedBrand();
   const activeCategory = useActiveCategory();
-  const filters = useFilters();
   const lastRefreshed = useLastRefreshed();
   const isRefreshing = useIsRefreshing();
   
   return {
-    selectedBrand,
+    selectedBrandId,
     activeCategory,
-    filters,
     lastRefreshed,
     isRefreshing,
   };

@@ -9,10 +9,6 @@ import {
   CardTitle, 
   Button, 
   Badge, 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -29,21 +25,21 @@ import {
   Brain,
   X
 } from 'lucide-react';
-import { cn } from '@boastitup/ui';
+import { cn } from '@/lib/utils';
 
 // Components
 import BrandScoreCard from '../../components/brand-health/BrandScoreCard';
-import InsightCard from '../../components/brand-health/InsightCard';
-import AIActionCard from '../../components/brand-health/AIActionCard';
+import CategoryCard from '../../components/brand-health/CategoryCard';
 
-// Hooks
-import { useBrandHealthScore } from '../../hooks/use-brand-health-score';
-import { useInsightsByCategory, useInsightsSummary } from '../../hooks/use-insights-by-category';
+// New Hooks
 import { 
-  useAIInsights,
-  useAIInsightsSummary,
-  useUrgentAIInsights
-} from '../../hooks/use-ai-insights-brand-health';
+  useBrandHealthScore,
+  useInsightsWithActions,
+  useCategoryInsights,
+  useUrgentActions,
+  useBrandHealthSummary,
+  useUpdateActionStage
+} from '../../hooks/use-brand-health-v2';
 
 // Store
 import {
@@ -53,49 +49,29 @@ import {
 } from '../../store/brandHealthStore';
 
 // Types
-import type { InsightData, AIInsight, CategoryType } from '../../types/brand-health';
-import { BrandHealthService } from '../../services/brand-health-service';
+import type { ActionStage } from '../../types/brand-health';
+import { getGridColumns } from '../../types/brand-health';
 
 interface BrandHealthDashboardProps {
   brandId: string;
   tenantId: string;
+  userId: string;
 }
 
-const PRIORITY_OPTIONS = [
-  'CRITICAL PRIORITY',
-  'HIGH PRIORITY', 
-  'MEDIUM PRIORITY',
-  'LOW PRIORITY'
-];
-
-const STATUS_OPTIONS = [
-  'Unread',
-  'Viewed',
-  'Saved',
-  'Selected for Action',
-  'In Progress',
-  'Completed'
-];
-
-export default function BrandHealthDashboard({ brandId, tenantId }: BrandHealthDashboardProps) {
+export default function BrandHealthDashboard({ brandId, tenantId, userId }: BrandHealthDashboardProps) {
   const queryClient = useQueryClient();
   const { 
-    activeCategory, 
     lastRefreshed, 
     isRefreshing 
   } = useDashboardState();
   const { 
     setSelectedBrand, 
-    setActiveCategory, 
     setLastRefreshed, 
     setRefreshing,
-    clearFilters,
-    togglePriorityFilter,
-    toggleStatusFilter
+    clearFilters
   } = useBrandHealthActions();
-  const { hasActiveFilters, priority: priorityFilters, status: statusFilters } = useCurrentFilters();
 
-  // Data fetching hooks
+  // New data fetching hooks
   const { 
     data: brandHealthScore, 
     isLoading: scoreLoading, 
@@ -103,23 +79,23 @@ export default function BrandHealthDashboard({ brandId, tenantId }: BrandHealthD
   } = useBrandHealthScore(brandId, tenantId);
   
   const { 
-    data: insights, 
-    summary: insightsSummary, 
-    isLoading: insightsLoading, 
-    error: insightsError 
-  } = useInsightsSummary(brandId, tenantId);
+    data: categoryInsights, 
+    isLoading: categoryLoading, 
+    error: categoryError 
+  } = useCategoryInsights(brandId, tenantId);
   
   const { 
-    data: aiInsights, 
-    summary: aiSummary, 
-    isLoading: aiLoading, 
-    error: aiError 
-  } = useAIInsightsSummary(brandId, tenantId);
-  
-  const { 
-    data: urgentInsights, 
+    data: urgentActions, 
     isLoading: urgentLoading 
-  } = useUrgentAIInsights(brandId, tenantId);
+  } = useUrgentActions(brandId, tenantId);
+  
+  const { 
+    summary: healthSummary, 
+    isLoading: summaryLoading 
+  } = useBrandHealthSummary(brandId, tenantId);
+
+  // Action mutation hook
+  const updateActionStageMutation = useUpdateActionStage();
 
   // Set brand in store
   useEffect(() => {
@@ -128,32 +104,11 @@ export default function BrandHealthDashboard({ brandId, tenantId }: BrandHealthD
     }
   }, [brandId, setSelectedBrand]);
 
-  // Group insights by category
-  const insightsByCategory = useMemo(() => {
-    if (!insights) return {};
-    return BrandHealthService.groupInsightsByCategory(insights);
-  }, [insights]);
-
-  // Filter AI insights based on selected filters
-  const filteredAIInsights = useMemo(() => {
-    if (!aiInsights) return [];
-    
-    let filtered = aiInsights;
-    
-    if (priorityFilters.length > 0) {
-      filtered = filtered.filter(insight => 
-        priorityFilters.includes(insight.priority_display)
-      );
-    }
-    
-    if (statusFilters.length > 0) {
-      filtered = filtered.filter(insight => 
-        statusFilters.includes(insight.action_status)
-      );
-    }
-    
-    return filtered;
-  }, [aiInsights, priorityFilters, statusFilters]);
+  // Dynamic grid columns based on category count
+  const gridColumns = useMemo(() => {
+    if (!categoryInsights) return 'grid-cols-1';
+    return getGridColumns(categoryInsights.length);
+  }, [categoryInsights]);
 
   // Manual refresh function
   const handleRefresh = async () => {
@@ -165,8 +120,7 @@ export default function BrandHealthDashboard({ brandId, tenantId }: BrandHealthD
           const queryKey = query.queryKey;
           return (
             queryKey.includes('brand-health-score') ||
-            queryKey.includes('insights-by-category') ||
-            queryKey.includes('ai-insights')
+            queryKey.includes('insights-with-actions')
           ) && queryKey.includes(brandId);
         }
       });
@@ -179,19 +133,23 @@ export default function BrandHealthDashboard({ brandId, tenantId }: BrandHealthD
     }
   };
 
-  // Handle AI insight status change
-  const handleAIInsightStatusChange = (insightId: string, newStatus: AIInsight['action_status']) => {
-    console.log(`Status changed for insight ${insightId}:`, newStatus);
-    // In a real implementation, this would make an API call to update the status
-    // For now, we'll just invalidate the queries to refetch data
-    queryClient.invalidateQueries({
-      queryKey: ['ai-insights', brandId, tenantId]
-    });
+  // Handle action stage change
+  const handleActionStageChange = async (actionId: string, newStage: ActionStage) => {
+    try {
+      await updateActionStageMutation.mutateAsync({
+        actionId,
+        stage: newStage,
+        userId
+      });
+    } catch (error) {
+      console.error('Error updating action stage:', error);
+      // Handle error (show toast, etc.)
+    }
   };
 
   // Loading state
-  const isLoading = scoreLoading || insightsLoading || aiLoading;
-  const hasErrors = scoreError || insightsError || aiError;
+  const isLoading = scoreLoading || categoryLoading || summaryLoading;
+  const hasErrors = scoreError || categoryError;
 
   if (hasErrors) {
     return (
@@ -254,67 +212,71 @@ export default function BrandHealthDashboard({ brandId, tenantId }: BrandHealthD
       </div>
 
       {/* Summary Cards */}
-      {(insightsSummary || aiSummary) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {insightsSummary && (
-            <>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total Insights</p>
-                      <p className="text-2xl font-bold">{insightsSummary.total}</p>
-                    </div>
-                    <BarChart3 className="h-8 w-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Critical Issues</p>
-                      <p className="text-2xl font-bold text-red-600">{insightsSummary.critical}</p>
-                    </div>
-                    <AlertTriangle className="h-8 w-8 text-red-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+      {healthSummary && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Categories</p>
+                  <p className="text-2xl font-bold">{healthSummary.totalCategories}</p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
           
-          {aiSummary && (
-            <>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">AI Insights</p>
-                      <p className="text-2xl font-bold">{aiSummary.total}</p>
-                    </div>
-                    <Brain className="h-8 w-8 text-purple-600" />
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Urgent Actions</p>
-                      <p className="text-2xl font-bold text-orange-600">{aiSummary.urgent}</p>
-                    </div>
-                    <AlertTriangle className="h-8 w-8 text-orange-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Insights</p>
+                  <p className="text-2xl font-bold">{healthSummary.totalInsights}</p>
+                </div>
+                <Brain className="h-8 w-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Actions</p>
+                  <p className="text-2xl font-bold">{healthSummary.totalActions}</p>
+                </div>
+                <Clock className="h-8 w-8 text-indigo-600" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">New Actions</p>
+                  <p className="text-2xl font-bold text-blue-600">{healthSummary.newActions}</p>
+                </div>
+                <Brain className="h-8 w-8 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Urgent Actions</p>
+                  <p className="text-2xl font-bold text-red-600">{healthSummary.urgentActions}</p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Main Dashboard Layout */}
+      {/* Main Dashboard Layout - New Grid System */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Left Panel - Brand Score Card */}
         <div className="lg:col-span-1">
@@ -325,156 +287,79 @@ export default function BrandHealthDashboard({ brandId, tenantId }: BrandHealthD
           />
         </div>
 
-        {/* Right Panel - Tabs */}
+        {/* Right Panel - Dynamic Category Grid */}
         <div className="lg:col-span-3">
-          <Tabs value={activeCategory} onValueChange={(value) => setActiveCategory(value as CategoryType | 'AI Actions')}>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <TabsList className="grid w-full max-w-lg grid-cols-4">
-                <TabsTrigger value="Awareness">Awareness</TabsTrigger>
-                <TabsTrigger value="Consideration">Consider</TabsTrigger>
-                <TabsTrigger value="Trust & Credibility">Trust</TabsTrigger>
-                <TabsTrigger value="AI Actions">AI Actions</TabsTrigger>
-              </TabsList>
-              
-              {/* Filters for AI Actions */}
-              {activeCategory === 'AI Actions' && (
-                <div className="flex items-center space-x-2">
-                  {hasActiveFilters && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="text-xs"
-                    >
-                      <X className="h-3 w-3 mr-1" />
-                      Clear
-                    </Button>
-                  )}
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Filter className="h-4 w-4 mr-2" />
-                        Filter
-                        {hasActiveFilters && (
-                          <Badge variant="secondary" className="ml-2 text-xs">
-                            {priorityFilters.length + statusFilters.length}
-                          </Badge>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>Priority</DropdownMenuLabel>
-                      {PRIORITY_OPTIONS.map((priority) => (
-                        <DropdownMenuItem
-                          key={priority}
-                          onClick={() => togglePriorityFilter(priority)}
-                          className="flex items-center justify-between"
-                        >
-                          <span>{priority}</span>
-                          {priorityFilters.includes(priority) && (
-                            <Badge variant="secondary" className="text-xs">✓</Badge>
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                      
-                      <DropdownMenuSeparator />
-                      
-                      <DropdownMenuLabel>Status</DropdownMenuLabel>
-                      {STATUS_OPTIONS.map((status) => (
-                        <DropdownMenuItem
-                          key={status}
-                          onClick={() => toggleStatusFilter(status)}
-                          className="flex items-center justify-between"
-                        >
-                          <span>{status}</span>
-                          {statusFilters.includes(status) && (
-                            <Badge variant="secondary" className="text-xs">✓</Badge>
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+          {/* Dynamic Grid Layout for Categories */}
+          {categoryInsights && categoryInsights.length > 0 ? (
+            <div className={cn("grid gap-6", gridColumns)}>
+              {categoryInsights.map((categoryData) => (
+                <CategoryCard
+                  key={categoryData.category}
+                  category={categoryData.category}
+                  insights={categoryData.insights}
+                  isLoading={categoryLoading}
+                  onActionStageChange={handleActionStageChange}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              {isLoading ? (
+                <div>Loading insights...</div>
+              ) : (
+                <div>
+                  <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No insights available at this time</p>
                 </div>
               )}
             </div>
+          )}
 
-            {/* Tab Contents */}
-            <TabsContent value="Awareness" className="space-y-6">
-              <InsightCard
-                category="Awareness"
-                insights={insightsByCategory['Awareness'] || []}
-                isLoading={insightsLoading}
-              />
-            </TabsContent>
-
-            <TabsContent value="Consideration" className="space-y-6">
-              <InsightCard
-                category="Consideration"
-                insights={insightsByCategory['Consideration'] || []}
-                isLoading={insightsLoading}
-              />
-            </TabsContent>
-
-            <TabsContent value="Trust & Credibility" className="space-y-6">
-              <InsightCard
-                category="Trust & Credibility"
-                insights={insightsByCategory['Trust & Credibility'] || []}
-                isLoading={insightsLoading}
-              />
-            </TabsContent>
-
-            <TabsContent value="AI Actions" className="space-y-6">
-              {urgentInsights && urgentInsights.length > 0 && (
-                <Card className="border-red-200 bg-red-50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-red-700">
-                      <AlertTriangle className="h-5 w-5" />
-                      <span>Urgent Actions Required</span>
-                      <Badge variant="destructive">{urgentInsights.length}</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {urgentInsights.slice(0, 2).map((insight) => (
-                      <AIActionCard
-                        key={insight.id}
-                        insight={insight}
-                        onStatusChange={handleAIInsightStatusChange}
-                      />
+          {/* Urgent Actions Section */}
+          {urgentActions && urgentActions.length > 0 && (
+            <div className="mt-8">
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-red-700">
+                    <AlertTriangle className="h-5 w-5" />
+                    <span>Urgent Actions Required</span>
+                    <Badge variant="destructive">{urgentActions.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-red-600 mb-4">
+                    These actions require immediate attention due to high impact scores (8+).
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {urgentActions.slice(0, 4).map((action) => (
+                      <div key={action.id} className="bg-white rounded-lg border border-red-200 p-4">
+                        <div className="space-y-2">
+                          <h5 className="font-medium text-gray-900">{action.action_text}</h5>
+                          <div className="flex items-center gap-2 text-xs">
+                            <Badge variant="destructive">Impact: {action.action_impact_score}/10</Badge>
+                            <Badge variant="outline">{action.action_priority}</Badge>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleActionStageChange(action.id, 'viewed')}
+                            className="w-full"
+                          >
+                            Review Action
+                          </Button>
+                        </div>
+                      </div>
                     ))}
-                  </CardContent>
-                </Card>
-              )}
-              
-              <div className="space-y-4">
-                {isLoading && (
-                  <div className="text-center py-8">Loading AI insights...</div>
-                )}
-                
-                {filteredAIInsights.length === 0 && !isLoading && (
-                  <Card>
-                    <CardContent className="text-center py-12">
-                      <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">
-                        {hasActiveFilters 
-                          ? 'No AI insights match your current filters' 
-                          : 'No AI insights available at this time'
-                        }
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                
-                {filteredAIInsights.map((insight) => (
-                  <AIActionCard
-                    key={insight.id}
-                    insight={insight}
-                    onStatusChange={handleAIInsightStatusChange}
-                  />
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
+                  </div>
+                  {urgentActions.length > 4 && (
+                    <p className="text-xs text-red-600 text-center mt-4">
+                      + {urgentActions.length - 4} more urgent actions
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>
