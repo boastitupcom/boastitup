@@ -18,8 +18,19 @@ import {
   Trash2,
   ArrowRight 
 } from 'lucide-react';
-import type { ActionContextMenuProps, ActionStage } from '../../types/brand-health';
+import type { ActionStage } from '../../types/brand-health';
 import { getValidTransitions, getStageDisplayName } from '../../types/brand-health';
+
+interface ActionContextMenuProps {
+  actionId: string;
+  currentStage: ActionStage;
+  isAssignedToOKR: boolean;
+  isAssignedToCampaign: boolean;
+  onStageChange: (stage: ActionStage) => void;
+  onLinkToOKR: () => void;
+  onAssignToCampaign: () => void;
+  onRemoveAssignments: () => void;
+}
 
 export default function ActionContextMenu({
   actionId,

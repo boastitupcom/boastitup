@@ -72,12 +72,13 @@ export const useUpdateActionStage = () => {
       });
       
       // Optimistically update the cache if needed
+      // Optimistically update the cache if needed
       queryClient.setQueryData(['insights-with-actions'], (old: InsightWithActions[] | undefined) => {
         if (!old) return old;
         
         return old.map(insight => ({
           ...insight,
-          ai_recommended_actions_v1: insight.ai_recommended_actions_v1.map(action =>
+          ai_recommended_actions_v1: (insight.ai_recommended_actions_v1 || []).map(action =>
             action.id === variables.actionId 
               ? { ...action, stage: variables.stage }
               : action

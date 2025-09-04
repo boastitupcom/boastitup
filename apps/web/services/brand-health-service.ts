@@ -58,7 +58,7 @@ export const BrandHealthService = {
   },
 
   /**
-   * Groups insights by category for dashboard rendering
+   * Groups insights by category for dashboard rendering - matches latest.txt specs
    */
   groupInsightsByCategory: (insights: InsightWithActions[]): Record<string, InsightWithActions[]> => {
     return insights.reduce((acc, insight) => {

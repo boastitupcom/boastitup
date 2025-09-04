@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   BarChart3,
   Brain,
-  X
+  X,
+  CheckSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -104,11 +105,14 @@ export default function BrandHealthDashboard({ brandId, tenantId, userId }: Bran
     }
   }, [brandId, setSelectedBrand]);
 
-  // Dynamic grid columns based on category count
+  // Dynamic grid columns based on category count - matches specs exactly
   const gridColumns = useMemo(() => {
     if (!categoryInsights) return 'grid-cols-1';
     return getGridColumns(categoryInsights.length);
   }, [categoryInsights]);
+
+  // Debug log for grid system
+  console.log('Category count:', categoryInsights?.length, 'Grid classes:', gridColumns);
 
   // Manual refresh function
   const handleRefresh = async () => {
@@ -211,21 +215,9 @@ export default function BrandHealthDashboard({ brandId, tenantId, userId }: Bran
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - 1x4 Grid */}
       {healthSummary && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Categories</p>
-                  <p className="text-2xl font-bold">{healthSummary.totalCategories}</p>
-                </div>
-                <BarChart3 className="h-8 w-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -245,7 +237,7 @@ export default function BrandHealthDashboard({ brandId, tenantId, userId }: Bran
                   <p className="text-sm font-medium text-gray-600">Total Actions</p>
                   <p className="text-2xl font-bold">{healthSummary.totalActions}</p>
                 </div>
-                <Clock className="h-8 w-8 text-indigo-600" />
+                <CheckSquare className="h-8 w-8 text-indigo-600" />
               </div>
             </CardContent>
           </Card>
@@ -257,7 +249,7 @@ export default function BrandHealthDashboard({ brandId, tenantId, userId }: Bran
                   <p className="text-sm font-medium text-gray-600">New Actions</p>
                   <p className="text-2xl font-bold text-blue-600">{healthSummary.newActions}</p>
                 </div>
-                <Brain className="h-8 w-8 text-blue-600" />
+                <AlertTriangle className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
@@ -287,25 +279,37 @@ export default function BrandHealthDashboard({ brandId, tenantId, userId }: Bran
           />
         </div>
 
-        {/* Right Panel - Dynamic Category Grid */}
+        {/* Right Panel - Dynamic Category Grid (matches latest.txt specs) */}
         <div className="lg:col-span-3">
           {/* Dynamic Grid Layout for Categories */}
           {categoryInsights && categoryInsights.length > 0 ? (
-            <div className={cn("grid gap-6", gridColumns)}>
-              {categoryInsights.map((categoryData) => (
-                <CategoryCard
-                  key={categoryData.category}
-                  category={categoryData.category}
-                  insights={categoryData.insights}
-                  isLoading={categoryLoading}
-                  onActionStageChange={handleActionStageChange}
-                />
-              ))}
+            <div className="space-y-6">
+              {/* Debug info for development */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+                  Grid: {categoryInsights.length} categories → {gridColumns}
+                </div>
+              )}
+              
+              <div className={cn("grid gap-6", gridColumns)}>
+                {categoryInsights.map((categoryData) => (
+                  <CategoryCard
+                    key={categoryData.category}
+                    category={categoryData.category}
+                    insights={categoryData.insights}
+                    isLoading={categoryLoading}
+                    onActionStageChange={handleActionStageChange}
+                  />
+                ))}
+              </div>
             </div>
           ) : (
             <div className="text-center py-12">
               {isLoading ? (
-                <div>Loading insights...</div>
+                <div className="space-y-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <div>Loading insights...</div>
+                </div>
               ) : (
                 <div>
                   <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />

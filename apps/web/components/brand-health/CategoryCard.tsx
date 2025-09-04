@@ -19,10 +19,20 @@ import {
   Linkedin,
   Twitter,
   Facebook,
-  Instagram
+  Instagram,
+  Heart,
+  Shield,
+  ThumbsUp,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { CategoryCardProps, InsightWithActions, ActionStage } from '../../types/brand-health';
+import type { 
+  CategoryCardProps, 
+  InsightWithActions, 
+  ActionStage, 
+  ImpactLevel, 
+  ExpirationStatus 
+} from '../../types/brand-health';
 import { 
   getCategoryTheme, 
   getImpactLevel, 
@@ -35,7 +45,7 @@ import {
 import AIActionCard from './AIActionCard';
 
 // Platform Icon Component
-const PlatformIconComponent = ({ platform }: { platform: string }) => {
+const PlatformIconComponent = ({ platform }: { platform?: string }) => {
   const platformData = getPlatformIcon(platform);
   const iconMap = {
     'Activity': Activity,
@@ -49,12 +59,39 @@ const PlatformIconComponent = ({ platform }: { platform: string }) => {
     'Linkedin': Linkedin,
     'Twitter': Twitter,
     'Facebook': Facebook,
-    'Instagram': Instagram
+    'Instagram': Instagram,
+    'Heart': Heart,
+    'Shield': Shield,
+    'ThumbsUp': ThumbsUp,
+    'BarChart3': BarChart3
   };
   
   const IconComponent = iconMap[platformData.icon as keyof typeof iconMap] || Activity;
   
   return <IconComponent className="h-3 w-3" style={{ color: platformData.color }} />;
+};
+
+// Category Icon Component
+const CategoryIconComponent = ({ icon, color }: { icon: string; color: string }) => {
+  const iconMap = {
+    'Search': Search,
+    'ThumbsUp': ThumbsUp,
+    'Shield': Shield,
+    'Heart': Heart,
+    'BarChart3': BarChart3,
+    'Activity': Activity
+  };
+  
+  const IconComponent = iconMap[icon as keyof typeof iconMap] || BarChart3;
+  
+  return (
+    <div 
+      className="w-3 h-3 rounded-full flex items-center justify-center" 
+      style={{ backgroundColor: color }}
+    >
+      <IconComponent className="h-2 w-2 text-white" />
+    </div>
+  );
 };
 
 export default function CategoryCard({ 
@@ -218,9 +255,11 @@ interface InsightItemProps {
 }
 
 function InsightItem({ insight, onActionStageChange, isFirst }: InsightItemProps) {
+  const [actionsExpanded, setActionsExpanded] = useState(false);
   const impactLevel = getImpactLevel(insight.impact_score);
   const impactColor = getImpactColor(impactLevel);
-  const hasActions = insight.ai_recommended_actions_v1.length > 0;
+  const hasActions = (insight.ai_recommended_actions_v1 || []).length > 0;
+  const activeActions = (insight.ai_recommended_actions_v1 || []).filter(action => action.stage !== 'actioned');
 
   return (
     <div className={cn(
@@ -306,18 +345,20 @@ function InsightItem({ insight, onActionStageChange, isFirst }: InsightItemProps
         {hasActions && (
           <div className="space-y-2 mt-4">
             <h5 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-              Recommended Actions ({insight.ai_recommended_actions_v1.length})
+              Recommended Actions ({insight.ai_recommended_actions_v1.filter(action => action.stage !== 'actioned').length})
             </h5>
             
             <div className="space-y-2">
-              {insight.ai_recommended_actions_v1.map((action) => (
-                <AIActionCard
-                  key={action.id}
-                  action={action}
-                  insightTitle={insight.insight_title}
-                  onStageChange={onActionStageChange}
-                />
-              ))}
+              {insight.ai_recommended_actions_v1
+                .filter(action => action.stage !== 'actioned') // Hide completed actions from individual cards
+                .map((action) => (
+                  <AIActionCard
+                    key={action.id}
+                    action={action}
+                    insightTitle={insight.insight_title}
+                    onStageChange={onActionStageChange}
+                  />
+                ))}
             </div>
           </div>
         )}
