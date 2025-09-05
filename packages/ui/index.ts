@@ -26,6 +26,7 @@ export * from "./src/components/ui/sheet";
 export * from "./src/components/ui/collapsible";
 export * from "./src/components/ui/sonner";
 export * from "./src/components/ui/breadcrumb";
+export * from "./src/components/ui/slider";
 
 // Legacy UI Components (to be removed after migration)
 export * from "./src/components/ui/okr-template-grid";

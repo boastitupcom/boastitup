@@ -70,20 +70,15 @@ const InsightItem = ({ insight }: InsightItemProps) => {
           {insight.insight_text}
         </p>
         
-        {insight.metric_value && (
+        {insight.yoy_change_percent !== 0 && (
           <div className="flex items-center space-x-2">
-            <span className="text-lg font-semibold text-gray-900">
-              {formatMetricValue(insight.metric_value)}
+            <span className={cn(
+              "text-xs font-medium",
+              insight.yoy_change_percent > 0 ? "text-green-600" : "text-red-600"
+            )}>
+              {insight.yoy_change_percent > 0 ? '+' : ''}
+              {insight.yoy_change_percent.toFixed(1)}% YoY
             </span>
-            {insight.yoy_change_percent !== 0 && (
-              <span className={cn(
-                "text-xs font-medium",
-                insight.yoy_change_percent > 0 ? "text-green-600" : "text-red-600"
-              )}>
-                {insight.yoy_change_percent > 0 ? '+' : ''}
-                {insight.yoy_change_percent.toFixed(1)}% YoY
-              </span>
-            )}
           </div>
         )}
       </div>
