@@ -190,3 +190,6 @@ export interface ProgressCalculation {
   confidence_trend: 'increasing' | 'decreasing' | 'stable';
   insights: string[];
 }
+
+// Export competitor intelligence types
+export * from './src/competitor-intelligence.types';

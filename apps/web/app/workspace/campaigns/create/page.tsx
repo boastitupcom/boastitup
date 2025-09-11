@@ -24,6 +24,11 @@ import {
 } from "lucide-react";
 import { createClient } from "@boastitup/supabase/client";
 import { useBrandStore } from "../../../../store/brandStore";
+import { useCompetitorIntelligenceStore } from "../../../../store/competitorIntelligenceStore";
+import { useCampaignIntelligenceData } from "@boastitup/hooks/src/competitor-intelligence";
+import { TrendingTopicsPanel } from "../../../../components/competitor-intelligence/TrendingTopicsPanel";
+import { CompetitorIntelligencePanel } from "../../../../components/competitor-intelligence/CompetitorIntelligencePanel";
+import { IntelligenceToggle } from "../../../../components/competitor-intelligence/IntelligenceToggle";
 
 // Types
 interface CampaignFormData {
@@ -95,7 +100,28 @@ const CampaignDraftService = {
         ...draftPayload,
         last_updated: new Date().toISOString()
       })
-      .select('*, brands(name)');
+      .select(`
+        id,
+        tenant_id,
+        brand_id,
+        created_by,
+        campaign_name,
+        campaign_type,
+        campaign_description,
+        campaign_start_date,
+        campaign_end_date,
+        campaign_budget_allocated,
+        campaign_platforms,
+        campaign_content,
+        campaign_targeting,
+        step_completed,
+        draft_status,
+        source_insight_id,
+        last_updated,
+        created_at,
+        expires_at,
+        brands(name)
+      `);
     if (error) throw error;
     return data;
   }
@@ -137,7 +163,8 @@ const validateStep1 = (data: CampaignFormData) => {
 export default function CreateCampaignPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { selectedBrandId } = useBrandStore();
+  const { activeBrand } = useBrandStore();
+  const { intelligencePanelVisible, setIntelligencePanelVisible } = useCompetitorIntelligenceStore();
 
   // Form State
   const [formData, setFormData] = useState<CampaignFormData>({
@@ -149,9 +176,17 @@ export default function CreateCampaignPage() {
     campaign_budget_allocated: 2500,
   });
 
+  // Load campaign intelligence data
+  const {
+    trendingTopics,
+    competitorIntelligence,
+    intelligenceInsights,
+    brandCurrency,
+    isLoading: intelligenceLoading
+  } = useCampaignIntelligenceData(activeBrand?.id || '', formData.campaign_type);
+
   // UI State
   const [campaignTypes, setCampaignTypes] = useState<CampaignType[]>([]);
-  const [brandCurrency, setBrandCurrency] = useState({ symbol: '$', code: 'USD' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -231,24 +266,7 @@ export default function CreateCampaignPage() {
     loadCampaignTypes();
   }, [formData.campaign_type]);
 
-  // Load brand currency
-  useEffect(() => {
-    const loadBrandCurrency = async () => {
-      if (selectedBrandId) {
-        try {
-          const currency = await CampaignSetupService.getBrandCurrency(selectedBrandId);
-          setBrandCurrency({
-            symbol: currency.currency_symbol,
-            code: currency.currency_code
-          });
-        } catch {
-          setBrandCurrency({ symbol: '$', code: 'USD' });
-        }
-      }
-    };
-
-    loadBrandCurrency();
-  }, [selectedBrandId]);
+  // Brand currency is now handled by useCampaignIntelligenceData hook
 
   // Form validation
   const isStep1Complete = useMemo(() => {
@@ -315,7 +333,7 @@ export default function CreateCampaignPage() {
         campaign_end_date: formData.campaign_end_date,
         campaign_budget_allocated: formData.campaign_budget_allocated,
         step_completed: 1,
-        brand_id: selectedBrandId,
+        brand_id: activeBrand?.id,
         tenant_id: user.user.user_metadata?.tenant_id || 'default_tenant',
         created_by: user.user.id,
         source_insight_id: searchParams?.get('insight_id'),
@@ -357,7 +375,7 @@ export default function CreateCampaignPage() {
         campaign_end_date: formData.campaign_end_date,
         campaign_budget_allocated: formData.campaign_budget_allocated,
         step_completed: 1,
-        brand_id: selectedBrandId,
+        brand_id: activeBrand?.id,
         tenant_id: user.user.user_metadata?.tenant_id || 'default_tenant',
         created_by: user.user.id,
         source_insight_id: searchParams?.get('insight_id'),
@@ -399,33 +417,7 @@ export default function CreateCampaignPage() {
     ? optimizationTips[formData.campaign_type as keyof typeof optimizationTips] || optimizationTips.default
     : optimizationTips.default;
 
-  // Dummy data for intelligence panels
-  const dummyAISuggestions = [
-    {
-      title: "Increase Instagram engagement with polls",
-      impact: "High",
-      confidence: "87%",
-      description: "Based on your campaign type, interactive polls could boost engagement by 35%"
-    }
-  ];
-
-  const dummyTrendingTopics = [
-    { name: "#BackToSchool", growth: "+45%", volume: "2.3M" },
-    { name: "#SustainableFashion", growth: "+32%", volume: "890K" },
-    { name: "#WFHLife", growth: "+28%", volume: "1.5M" }
-  ];
-
-  const dummyCompetitorData = {
-    activeCampaigns: 3,
-    avgSpend: 4200,
-    topContentType: "Video testimonials"
-  };
-
-  const dummySentimentData = {
-    positive: 68,
-    neutral: 24,
-    negative: 8
-  };
+  // All intelligence data is now loaded via useCampaignIntelligenceData hook
 
   if (isLoading) {
     return (
@@ -441,7 +433,13 @@ export default function CreateCampaignPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-6">
-            <h1 className="text-2xl font-bold text-gray-900">Create New Campaign</h1>
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">Create New Campaign</h1>
+              <IntelligenceToggle 
+                visible={intelligencePanelVisible}
+                onToggle={setIntelligencePanelVisible}
+              />
+            </div>
             <div className="flex items-center space-x-8">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-teal-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
@@ -494,81 +492,64 @@ export default function CreateCampaignPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className={`grid grid-cols-1 gap-8 ${intelligencePanelVisible ? 'xl:grid-cols-2' : 'xl:grid-cols-1 max-w-4xl mx-auto'}`}>
           {/* Left Column - Intelligence Panels */}
-          <div className="space-y-6">
-            {/* AI Suggested Actions - Teal/Blue Card */}
-            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <Badge className="bg-red-500 text-white text-xs px-2 py-1">HIGH PRIORITY</Badge>
-                <span className="text-teal-600 text-sm">87% Confidence</span>
-              </div>
-              <h3 className="text-gray-900 font-semibold mb-2">AI-Generated Suggestion</h3>
-              <p className="text-gray-700 text-sm mb-4">
-                Increase Instagram engagement rate by creating more interactive Stories with polls and Q&As to boost audience participation
-              </p>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Impact: <span className="text-red-600">High</span></span>
-                <span className="text-gray-600">Timeline: <span className="text-gray-900">Today</span></span>
-              </div>
-            </div>
-
-            {/* Trending Topics - Orange Card */}
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <h3 className="text-gray-900 font-semibold mb-4 flex items-center">
-                🔥 Trending Topics
-              </h3>
-              <div className="space-y-3">
-                {dummyTrendingTopics.map((trend, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-blue-600 font-medium">{trend.name}</span>
-                    <div className="text-right">
-                      <div className="text-green-600 text-sm font-medium">{trend.growth}</div>
-                      <div className="text-gray-600 text-xs">{trend.volume}</div>
-                    </div>
+          {intelligencePanelVisible && (
+            <div className="space-y-6">
+              {/* AI Suggested Actions */}
+              {intelligenceInsights.length > 0 && (
+                <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge className="bg-red-500 text-white text-xs px-2 py-1">
+                      {intelligenceInsights[0].impact.toUpperCase()} PRIORITY
+                    </Badge>
+                    <span className="text-teal-600 text-sm">
+                      {Math.round(intelligenceInsights[0].confidence * 100)}% Confidence
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <h3 className="text-gray-900 font-semibold mb-2">{intelligenceInsights[0].title}</h3>
+                  <p className="text-gray-700 text-sm mb-4">
+                    {intelligenceInsights[0].description}
+                  </p>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">
+                      Impact: <span className={`${
+                        intelligenceInsights[0].impact === 'high' ? 'text-red-600' :
+                        intelligenceInsights[0].impact === 'medium' ? 'text-orange-600' : 'text-gray-600'
+                      }`}>
+                        {intelligenceInsights[0].impact}
+                      </span>
+                    </span>
+                    <span className="text-gray-600">
+                      Actionable: <span className="text-gray-900">
+                        {intelligenceInsights[0].actionable ? 'Yes' : 'No'}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              )}
 
-            {/* Competitor Intelligence - Purple Card */}
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <h3 className="text-gray-900 font-semibold mb-4 flex items-center">
-                🎯 Competitor Intelligence
-              </h3>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-900">{dummyCompetitorData.activeCampaigns}</div>
-                  <div className="text-gray-600 text-sm">Active Campaigns</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-900">${(dummyCompetitorData.avgSpend / 1000).toFixed(1)}K</div>
-                  <div className="text-gray-600 text-sm">Avg Spend</div>
-                </div>
-              </div>
-              <div className="pt-3 border-t border-purple-200">
-                <span className="text-sm font-medium text-gray-900">🎬 Top Content: </span>
-                <span className="text-gray-700 text-sm">{dummyCompetitorData.topContentType}</span>
-              </div>
-            </div>
+              {/* Trending Topics Panel */}
+              <TrendingTopicsPanel
+                topics={trendingTopics}
+                isLoading={intelligenceLoading}
+                onTopicSelect={(topic) => {
+                  // Could integrate topic selection with campaign form
+                  console.log('Selected topic:', topic);
+                }}
+              />
 
-            {/* Audience Sentiment - Green Card */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="text-gray-900 font-semibold mb-4 flex items-center">
-                📊 Audience Sentiment
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center text-gray-900">
-                  <span className="text-sm">{dummySentimentData.positive}% Positive</span>
-                  <span className="text-sm">{dummySentimentData.neutral}% Neutral</span>
-                  <span className="text-sm">{dummySentimentData.negative}% Negative</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="bg-gradient-to-r from-green-500 via-yellow-400 to-red-500 h-2 rounded-full"></div>
-                </div>
-              </div>
+              {/* Competitor Intelligence Panel */}
+              <CompetitorIntelligencePanel
+                competitors={competitorIntelligence}
+                isLoading={intelligenceLoading}
+                onCompetitorSelect={(competitor) => {
+                  // Could integrate competitor selection for deeper insights
+                  console.log('Selected competitor:', competitor);
+                }}
+              />
             </div>
-          </div>
+          )}
 
           {/* Right Column - Campaign Setup Form */}
           <div className="space-y-6">
@@ -704,7 +685,7 @@ export default function CreateCampaignPage() {
                 {/* Budget */}
                 <div>
                   <h3 className="font-semibold text-lg mb-4 text-gray-900">
-                    Budget: {brandCurrency.symbol}{formData.campaign_budget_allocated.toLocaleString()} {brandCurrency.code}
+                    Budget: {brandCurrency.currency_symbol} {formData.campaign_budget_allocated.toLocaleString()} {brandCurrency.currency_code}
                   </h3>
                   <Slider
                     value={[formData.campaign_budget_allocated]}
@@ -715,18 +696,29 @@ export default function CreateCampaignPage() {
                     className="mb-2"
                   />
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">{brandCurrency.symbol}0</span>
-                    <span className="text-sm text-gray-600">{brandCurrency.symbol}50K+</span>
+                    <span className="text-sm text-gray-600">{brandCurrency.currency_symbol} 0</span>
+                    <span className="text-sm text-gray-600">{brandCurrency.currency_symbol} 50K+</span>
                   </div>
                 </div>
 
                 {/* Performance Predictions */}
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                   <div>
-                    <span className="font-medium text-gray-900">Predicted Performance: 25K-40K reach</span>
+                    <span className="font-medium text-gray-900">
+                      {formData.campaign_type && formData.campaign_budget_allocated > 0 ? 
+                        `Predicted Performance: ${Math.round(formData.campaign_budget_allocated * 10 / 1000)}K-${Math.round(formData.campaign_budget_allocated * 16 / 1000)}K reach` :
+                        'Predicted Performance: Configure type and budget'
+                      }
+                    </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-gray-600 text-sm">🏆 Competitors avg: $4.2K</span>
+                    <span className="text-gray-600 text-sm">
+                      🏆 Competitors avg: {
+                        competitorIntelligence.length > 0 ? 
+                        `${brandCurrency.currency_symbol} ${(competitorIntelligence.reduce((sum, c) => sum + c.avg_spend_raw, 0) / competitorIntelligence.length / 1000).toFixed(1)}K` :
+                        'Loading...'
+                      }
+                    </span>
                   </div>
                 </div>
               </div>
