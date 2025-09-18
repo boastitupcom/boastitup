@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { BrandHealthService } from '@/services/brand-health-service';
-import type { BrandHealthScore } from '@/types/brand-health.types';
+import { BrandHealthService, type BrandHealthScore } from './brandHealthService';
 
 export const useBrandHealthScore = (brandId: string, tenantId: string) => {
   return useQuery<BrandHealthScore | null, Error>({

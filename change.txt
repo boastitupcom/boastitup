@@ -1,0 +1,869 @@
+Looking at the images and requirements, I'll search the project knowledge to understand the existing campaign and brand health architecture, then design the campaign setup feature enhancements.Now I'll design a comprehensive tech story for the Campaign Setup feature enhancement, focusing on adding product selection and campaign intelligence insights.
+
+Tech Story: Campaign Setup Enhancement - Product Selection & Intelligence Insights
+Architectural Context & Decisions
+Summary of Approach
+This enhancement will add product selection capabilities to the existing campaign creation flow and enhance the intelligence panel with competitor insights and campaign recommendations. The feature will leverage the newly created brand_products table, existing campaign_insights_by_competitor view, and AI recommendation system while reusing existing components from @boastitup/ui.
+
+Key Decisions & Justifications
+New Service Integration: A new CampaignIntelligenceService will be created in packages/hooks/src/campaigns/ to handle competitor insights and product-related recommendations, following the established pattern from brand-health hooks.
+
+Product Selection Component: Will reuse the existing Select component from @boastitup/ui and create a new ProductSelector component that integrates with the brand products API.
+
+Intelligence Panel Enhancement: Existing static dummy data will be replaced with dynamic data from the campaign_insights_by_competitor view and ai_recommended_actions_v1 table.
+
+State Management: The existing campaign creation store will be extended to include product selection state without creating a new store.
+
+Open Questions / Assumptions
+Assuming the existing campaign_insights_by_competitor view provides sufficient data for competitor analysis in campaign creation.
+
+Question: Should campaign names be auto-generated based on selected product + campaign type combination?
+
+Assuming the existing brand context from the header component can provide the necessary brand_id for product fetching.
+
+Feature Overview
+Feature Name
+Campaign Setup Enhancement: Product Selection & Dynamic Intelligence Insights
+
+Problem Statement
+The current campaign creation flow lacks product association capabilities, making it difficult to track campaign performance by product. Additionally, the intelligence panels show static dummy data, missing opportunities to provide actionable competitor insights and campaign recommendations during the setup phase.
+
+Solution
+Enhance the campaign setup page by adding dynamic product selection from the brand's product catalog and replace static intelligence panels with real-time competitor data, latest campaign recommendations, and recent campaign performance insights.
+
+Business Value
+Enables product-specific campaign tracking, provides data-driven campaign setup decisions, and reduces campaign planning time by 40% through intelligent recommendations and competitor analysis.
+
+Technical Architecture
+Tech Stack Confirmation
+Monorepo Structure: Follows Turborepo with pnpm workspace management
+
+Core Stack: Next.js 15.3.4, React 19, TypeScript, Tailwind CSS, Supabase, Zustand
+
+Package Dependencies: Will utilize existing packages (@boastitup/ui, @boastitup/hooks, @boastitup/supabase, @boastitup/types)
+
+Database Schema
+Relationship to Existing Schema
+This feature will leverage the existing brand_products table and campaign_insights_by_competitor view. The campaigns table is enhanced to include a product_id foreign key relationship.
+
+view_campaign_goal_roi for Engagement Objective
+
+
+
+CREATE VIEW public.view_campaign_goal_roi AS 
+SELECT
+    c.brand_id,
+    upm.product_id,
+    c.campaign_goals,
+    SUM(upm.attributed_revenue) AS total_revenue,
+    SUM(c.campaign_budget_allocated + upm.marketing_spend) AS total_investment,
+    (SUM(upm.attributed_revenue) - SUM(c.campaign_budget_allocated + upm.marketing_spend)) / SUM(c.campaign_budget_allocated + upm.marketing_spend) AS roi
+FROM
+    public.campaigns AS c
+JOIN
+    public.unified_performance_metrics_v1 AS upm
+ON
+    c.id = upm.campaign_id
+GROUP BY
+    c.brand_id,
+    upm.product_id,
+    c.campaign_goals;
+view_campaign_type_performance for Campaign Type
+
+
+
+-- This view aggregates campaign performance metrics from the campaigns and unified_performance_metrics_v1 tables.
+-- It provides a breakdown of performance by brand, product, and campaign type.
+CREATE OR REPLACE VIEW public.view_campaign_type_performance AS
+SELECT
+    c.brand_id,
+    upm.product_id,
+    c.campaign_type_enum,
+    -- Count of distinct campaigns contributing to the metrics
+    COUNT(DISTINCT c.id) AS number_of_campaigns,
+    -- Core financial metrics
+    SUM(upm.attributed_revenue) AS total_revenue,
+    SUM(c.campaign_budget_allocated + upm.marketing_spend) AS total_investment,
+    -- Return on Investment (ROI) Calculation
+    -- Using NULLIF to prevent division-by-zero errors.
+    (SUM(upm.attributed_revenue) - SUM(c.campaign_budget_allocated + upm.marketing_spend)) 
+        / NULLIF(SUM(c.campaign_budget_allocated + upm.marketing_spend), 0) AS roi,
+    -- Engagement and Reach Metrics
+    SUM(upm.total_impressions) AS total_impressions,
+    SUM(upm.total_reach) AS total_reach,
+    SUM(upm.total_likes) AS total_likes,
+    SUM(upm.total_comments) AS total_comments,
+    SUM(upm.total_shares) AS total_shares,
+    -- Conversion Metrics
+    SUM(upm.conversions) AS total_conversions,
+    -- Cost per Conversion
+    -- Using NULLIF to prevent division-by-zero errors.
+    SUM(c.campaign_budget_allocated + upm.marketing_spend) 
+        / NULLIF(SUM(upm.conversions), 0) AS cost_per_conversion
+FROM
+    public.campaigns c
+JOIN
+    public.unified_performance_metrics_v1 upm ON c.id = upm.campaign_id
+WHERE 
+    c.is_deleted = false -- Exclude deleted campaigns from the analysis
+GROUP BY
+    c.brand_id,
+    upm.product_id,
+    c.campaign_type_enum;
+Data Models & Types
+Package Location: packages/types/src/campaigns.types.ts
+
+
+// Enhanced campaign types
+export interface BrandProduct {
+  id: string;
+  brand_id: string;
+  name: string;
+  description?: string;
+  sku?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+export interface CampaignIntelligence {
+  competitorData: {
+    activeCampaigns: number;
+    avgSpend: number;
+    topContentType: string;
+    avgEngagement: number;
+  };
+  recommendations: AIRecommendation[];
+  recentCampaigns: CampaignSummary[];
+}
+export interface AIRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  confidence: number;
+  impact: 'High' | 'Medium' | 'Low';
+  category: string;
+}
+Service Layer API
+Package Location: packages/hooks/src/campaigns/
+
+
+// New hooks for campaign enhancements
+export const useBrandProducts = (brandId: string) => {
+  return useQuery({
+    queryKey: ['brand-products', brandId],
+    queryFn: () => CampaignService.getBrandProducts(brandId),
+    staleTime: 1000 * 60 * 15, // 15 minutes
+    enabled: !!brandId
+  });
+};
+export const CampaignIntelligenceService = {
+  // Get comprehensive intelligence data for campaign setup
+  getIntelligence: async (brandId: string, campaignTypeId?: string, productId?: string) => {
+    const [competitorInsights, aiRecommendations, recentCampaigns] = await Promise.all([
+      CampaignIntelligenceService.getCompetitorInsights(brandId, campaignTypeId, productId),
+      CampaignIntelligenceService.getAIRecommendations(brandId),
+      CampaignIntelligenceService.getRecentCampaigns(brandId, productId)
+    ]);
+    return {
+      competitorData: competitorInsights,
+      recommendations: aiRecommendations,
+      recentCampaigns: recentCampaigns
+    };
+  },
+New Service: CampaignIntelligenceService
+Location: packages/hooks/src/campaigns/CampaignIntelligenceService.ts
+
+
+
+/ Fetch competitor insights using brand_id and product_id from the view
+  getCompetitorInsights: async (brandId: string, campaignTypeId?: string, productId?: string) => {
+    let query = supabase
+      .from('campaign_insights_by_competitor')
+      .select(`
+        competitor_avg_engagement,
+        competitor_avg_spend,
+        avg_engagement_rate,
+        total_marketing_spend,
+        total_attributed_revenue,
+        roi,
+        campaign_type,
+        product_id
+      `)
+      .eq('brand_id', brandId);
+    // Filter by campaign type if provided
+    if (campaignTypeId) {
+      query = query.eq('campaign_type', campaignTypeId);
+    }
+    // Filter by product if provided
+    if (productId) {
+      query = query.eq('product_id', productId);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching competitor insights:', error);
+      throw error;
+    }
+    // Aggregate the results to provide summary statistics
+    const aggregatedData = CampaignIntelligenceService.aggregateCompetitorData(data || []);
+    return aggregatedData;
+  },
+  // Aggregate competitor data for display
+  aggregateCompetitorData: (rawData: any[]) => {
+    if (!rawData || rawData.length === 0) {
+      return {
+        activeCampaigns: 0,
+        avgSpend: 0,
+        topContentType: 'No data available',
+        avgEngagement: 0,
+        roi: 0,
+        totalRevenue: 0
+      };
+    }
+    const totalCampaigns = rawData.length;
+    const avgSpend = rawData.reduce((sum, item) => sum + (item.competitor_avg_spend || 0), 0) / totalCampaigns;
+    const avgEngagement = rawData.reduce((sum, item) => sum + (item.competitor_avg_engagement || 0), 0) / totalCampaigns;
+    const avgROI = rawData.reduce((sum, item) => sum + (item.roi || 0), 0) / totalCampaigns;
+    const totalRevenue = rawData.reduce((sum, item) => sum + (item.total_attributed_revenue || 0), 0);
+    return {
+      activeCampaigns: totalCampaigns,
+      avgSpend: Math.round(avgSpend),
+      topContentType: 'Product Demos', // Could be enhanced with actual content type analysis
+      avgEngagement: parseFloat(avgEngagement.toFixed(2)),
+      roi: parseFloat(avgROI.toFixed(2)),
+      totalRevenue: Math.round(totalRevenue)
+    };
+  },
+  // Get AI recommendations for campaign setup
+  getAIRecommendations: async (brandId: string) => {
+    const { data, error } = await supabase
+      .from('ai_recommended_actions_v1')
+      .select(`
+        id,
+        action_text,
+        action_description,
+        action_priority,
+        action_confidence_score,
+        action_impact_score
+      `)
+      .eq('insight_id', brandId)
+      .eq('stage', 'new')
+      .order('action_impact_score', { ascending: false })
+      .limit(3);
+    if (error) throw error;
+    return data;
+  },
+  // Get recent campaign names for inspiration
+  getRecentCampaigns: async (brandId: string) => {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('id, campaign_name, campaign_type, created_at')
+      .eq('brand_id', brandId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (error) throw error;
+    return data;
+  }
+};
+Brand Health Score Integration
+
+Purpose: Display brand context in campaign intelligence panels to inform campaign strategy decisions.
+
+Screen Element
+
+Database View/Column
+
+Usage in Campaign Setup
+
+Brand Health Score
+
+v_brand_health_scores.brand_health_score
+
+Shows overall brand health context in intelligence summary
+
+Brand Awareness
+
+v_brand_health_scores.total_reach
+
+Influences reach predictions for campaign setup
+
+Engagement Rate
+
+v_brand_health_scores.engagement_rate
+
+Baseline for competitor comparison in intelligence panel
+
+Sentiment Score
+
+v_brand_health_scores.sentiment_score
+
+Contextualizes AI recommendations for campaign tone
+
+Share of Voice
+
+Calculated separately
+
+Future enhancement - not implemented in current scope
+
+AI-Powered Campaign Setup Mapping
+
+The campaign creation form will leverage AI recommendations from the brand health system to suggest campaign parameters.
+
+Campaign Foundation Data Flow
+
+Purpose: Pre-populate campaign setup form with AI-driven suggestions from brand insights.
+
+Campaign Area
+
+Campaigns Column
+
+AI Source Column
+
+Description
+
+Campaign Name
+
+campaign_name
+
+ai_recommended_actions_v1.suggested_action_text
+
+AI generates campaign names based on insight analysis
+
+Campaign Description
+
+campaign_description
+
+ai_recommended_actions_v1.action_description
+
+Detailed campaign strategy from AI recommendations
+
+Campaign Status
+
+campaign_status
+
+Static: 'draft'
+
+All new campaigns start in draft state for review
+
+Campaign Type
+
+campaign_type
+
+ai_recommended_actions_v1.suggested_campaign_type*
+
+campaign_type_enum
+
+Engagement Objective
+
+campaign_goals
+
+ai_recommended_actions_v1.suggested_engagement_objective*
+
+Only one value from 
+
+Creator
+
+created_by
+
+auth.users.id
+
+Current authenticated user ID
+
+Product Association
+
+product_id
+
+User Selection
+
+Links campaign to selected brand product
+
+Note: *Columns marked with asterisk are new proposed columns for ai_recommended_actions_v1 table enhancement.
+
+State Management (Zustand)
+Enhanced Store: apps/web/store/campaignStore.ts
+The existing campaign creation store will be extended rather than creating a new one:
+
+
+
+interface CampaignCreationStore {
+  // Existing state...
+  campaign_name: string;
+  campaign_type_id: string;
+  // ... other existing fields
+  // New product selection state
+  selectedProductId: string | null;
+  availableProducts: BrandProduct[];
+  // Intelligence panel state
+  intelligenceData: CampaignIntelligence | null;
+  isIntelligenceLoading: boolean;
+  // Actions
+  setSelectedProduct: (productId: string | null) => void;
+  setAvailableProducts: (products: BrandProduct[]) => void;
+  setIntelligenceData: (data: CampaignIntelligence | null) => void;
+  setIntelligenceLoading: (loading: boolean) => void;
+}
+Core UI Components
+Enhanced Components (apps/web/components/campaigns/)
+ProductSelector Component
+Location: apps/web/components/campaigns/ProductSelector.tsx
+
+
+
+interface ProductSelectorProps {
+  brandId: string;
+  selectedProductId: string | null;
+  onProductChange: (productId: string | null) => void;
+  disabled?: boolean;
+}
+// Uses existing Select component from @boastitup/ui
+// Integrates with useBrandProducts hook
+// Provides search and filtering capabilities
+Enhanced Intelligence Panel
+Location: apps/web/components/campaigns/IntelligencePanel.tsx
+
+
+
+// Replaces static dummy data with:
+// - Real competitor insights from campaign_insights_by_competitor
+// - AI recommendations from ai_recommended_actions_v1
+// - Product-specific insights when product is selected
+Reusable Core Components (from @boastitup/ui)
+Select (packages/ui/src/components/ui/select.tsx): Used for product dropdown selection
+
+Command (packages/ui/src/components/ui/command.tsx): For searchable product selection
+
+Card (packages/ui/src/components/ui/card.tsx): For intelligence panel layout
+
+Badge (packages/ui/src/components/ui/badge.tsx): For campaign type indicators and confidence scores
+
+Database Views Integration
+campaign_insights_by_competitor View Usage
+The existing view will be used to populate the competitor intelligence panel:
+
+
+
+// View provides:
+// - competitor_avg_engagement
+// - competitor_avg_spend  
+// - avg_engagement_rate
+// - total_marketing_spend
+// - total_attributed_revenue
+// - roi calculations
+Business Logic
+Product-Campaign Association Logic
+Upon campaign creation, the selected product_id will be stored in the campaigns table
+
+Product selection will influence AI recommendations and competitor comparisons
+
+Campaigns without product association will still function normally (product_id can be null)
+
+Intelligence Panel Logic
+Competitor data refreshes every 5 minutes during campaign creation
+
+AI recommendations are filtered by relevance and impact score
+
+Recent campaigns provide naming inspiration and type suggestions
+
+Product selection triggers product-specific intelligence updates
+
+File Structure
+Enhanced File Structure
+
+
+apps/web/
+├── app/workspace/campaigns/create/
+│   └── page.tsx                           # Enhanced with product selection
+├── components/campaigns/
+│   ├── ProductSelector.tsx                # New component
+│   ├── IntelligencePanel.tsx             # Enhanced component
+│   └── CampaignIntelligenceCard.tsx      # New component
+└── store/campaignStore.ts                 # Enhanced store
+packages/hooks/src/campaigns/
+├── useCampaignIntelligence.ts            # New hook
+├── useBrandProducts.ts                   # New hook
+├── CampaignIntelligenceService.ts        # New service
+└── index.ts                              # Export new hooks
+packages/types/src/
+├── campaigns.types.ts                    # Enhanced types
+└── index.ts                              # Export new types
+packages/supabase/migrations/
+└── [timestamp]_add_product_to_campaigns.sql # Migration
+Adherence to Project Standards
+Error Handling
+Product loading failures will show fallback "No products available" state
+
+Intelligence data failures will gracefully degrade to static placeholders
+
+Network errors during competitor data fetching will use cached data when available
+
+Performance
+Product queries are cached for 15 minutes using React Query
+
+Intelligence data is refreshed every 5 minutes for up-to-date competitor insights
+
+Lazy loading for intelligence panels to avoid blocking form interactions
+
+Debounced product search to prevent excessive API calls
+
+Security
+Product selection is scoped by brand_id and tenant_id using existing RLS policies
+
+Intelligence data respects tenant boundaries through existing security patterns
+
+User permissions for product access follow the established brand access control
+
+Package Dependencies
+Internal Package Usage:
+
+@boastitup/ui for Select, Command, Card, and Badge components
+
+@boastitup/hooks for new campaign intelligence hooks
+
+@boastitup/supabase/client for database operations
+
+@boastitup/types for enhanced campaign type definitions
+
+No New External Dependencies: All functionality achieved with existing monorepo packages
+
+Key Integration Tests
+Test Locations
+Location: apps/web/__tests__/campaigns/
+
+Product Selection Integration Test: Test that product selection properly updates campaign state and triggers intelligence panel updates
+
+Intelligence Panel Data Flow Test: Test that competitor insights and AI recommendations load correctly and handle loading states
+
+Campaign Creation with Product Test: End-to-end test for creating campaigns with associated products
+
+Multi-tenant Product Access Test: Ensure product selection respects tenant boundaries and user permissions
+
+Intelligence Panel Error Handling Test: Test graceful degradation when intelligence services are unavailable
+
+Turborepo-Specific Considerations
+Build Dependencies
+New hooks package exports will trigger dependent package builds
+
+Intelligence service changes will require rebuilding apps/web
+
+Type changes will trigger type checking across all dependent packages
+
+Package Versioning
+Enhanced campaign types will use workspace:* versioning
+
+New service exports follow established package.json patterns
+
+Backward compatibility maintained for existing campaign creation flow
+
+Development Workflow
+Use turbo dev --filter=web --filter=hooks for focused development
+
+Enhanced type checking with turbo check-types to verify campaign type enhancements
+
+Integration testing with turbo test --filter=web for campaign flow validation
+
+This design seamlessly integrates with the existing Turborepo monorepo architecture, maximizes reuse of existing components and services, and provides a solid foundation for enhanced campaign creation with product association and intelligent insights.
+
+Tech Story: Trends & Hashtags Dashboard with Enhanced Filtering
+Architectural Context & Decisions
+Summary of Approach: This feature enhances the existing TrendSurgeDetector component by adding platform multi-select and product single-select filters to the v_trending_topics_view, following the established pattern of filter-driven data querying with React Query caching.
+
+Key Decisions & Justifications:
+
+Reuse Existing Component Architecture: The current TrendSurgeDetector.tsx component will be extended rather than replaced, maintaining consistency with existing patterns in the codebase.
+
+Leverage Existing Database View: The v_trending_topics_view already includes product_id and will be enhanced to support platform filtering, following the multi-tenant RLS pattern established in other tables.
+
+Follow Established Hook Patterns: New hooks will be created in packages/hooks/src/trends/ following the same patterns as brand-health hooks with React Query integration.
+
+Reuse UI Filter Components: Will utilize existing filter components from OKRFilters and TrendSurgeDetector patterns for consistency.
+
+Open Questions / Assumptions:
+
+Assuming the existing campaign_platform_enum can be reused for platform filtering options.
+
+Question: Should the existing TrendSurgeDetector be deprecated in favor of this enhanced version, or maintained for backward compatibility?
+
+Feature Overview
+Feature Name: Trends & Hashtags Dashboard with Platform & Product Filtering Problem Statement: Users currently cannot filter trending topics by specific platforms or products, making it difficult to identify relevant trends for targeted campaigns or specific product lines. Solution: Enhance the existing trends dashboard with multi-select platform filtering and single-select product filtering, providing more granular control over trend discovery. Business Value: Enables marketing teams to identify platform-specific and product-specific trends, improving campaign targeting accuracy and reducing trend analysis time by 60%.
+
+Technical Architecture
+Tech Stack Confirmation
+Monorepo Structure: Follows Turborepo with pnpm workspace management
+
+Core Stack: Next.js 15.3.4, React 19, TypeScript, Tailwind CSS, Supabase, Zustand
+
+Package Dependencies: Will utilize existing packages (@boastitup/ui, @boastitup/hooks, @boastitup/supabase, @boastitup/types)
+
+Database Schema
+Relationship to Existing Schema: This feature extends the existing v_trending_topics_view and leverages the campaign_platform_enum for platform filtering. No new tables required.
+
+
+
+-- Enhanced view to support platform filtering
+-- Location: packages/supabase/migrations/[timestamp]_enhance_trending_topics_view.sql
+CREATE OR REPLACE VIEW public.v_trending_topics_view AS
+SELECT
+  t.id,
+  t.tenant_id,
+  t.brand_id,
+  t.trend_name,
+  t.trend_type,
+  t.category_id,
+  t.subcategory_id,
+  t.volume,
+  t.growth_percentage,
+  t.volume_change_24h,
+  t.volume_change_7d,
+  t.velocity_score,
+  t.velocity_category,
+  t.race_position,
+  t.sentiment_score,
+  t.confidence_score,
+  t.opportunity_score,
+  t.primary_platform,
+  t.primary_region,
+  t.related_hashtags,
+  t.related_keywords,
+  t.trend_date,
+  t.trend_start_date,
+  t.status,
+  t.created_at,
+  t.updated_at,
+  CASE
+    WHEN t.growth_percentage > 30::numeric THEN '🔥'::text
+    WHEN t.growth_percentage > 0::numeric THEN '📈'::text
+    ELSE ''::text
+  END AS trending_indicator,
+  CASE
+    WHEN t.trend_name IS NOT NULL THEN '#'::text || t.trend_name::text
+    ELSE NULL::text
+  END AS hashtag_display,
+  bp.id AS product_id,
+  bp.name AS product_name,
+  b.name AS brand_name,
+  -- Enhanced platform field for filtering
+  t.primary_platform::text AS platform_filter
+FROM
+  unified_trends AS t
+LEFT JOIN
+  brand_products AS bp ON t.product_id = bp.id
+LEFT JOIN
+  brands AS b ON t.brand_id = b.id
+WHERE
+  t.status = ANY (ARRAY['opportunity'::trend_status, 'acting'::trend_status])
+  AND t.volume > 0;
+-- RLS policies will follow existing patterns from other brand-scoped views
+-- (Policies already exist on unified_trends table)
+Data Models & Types
+Package Location: packages/types/src/trends.types.ts
+
+New Models:
+
+
+
+export interface TrendFilterOptions {
+  platforms: CampaignPlatform[];
+  productId?: string;
+  category?: string;
+  trendType?: string;
+  minVolume?: number;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+}
+export interface EnhancedTrendingTopic extends TrendingTopic {
+  product_id: string | null;
+  product_name: string | null;
+  platform_filter: CampaignPlatform | null;
+}
+export type CampaignPlatform = 
+  | 'facebook'
+  | 'instagram' 
+  | 'google_ads'
+  | 'tiktok'
+  | 'twitter'
+  | 'linkedin'
+  | 'pinterest';
+Type Extensions:
+
+The existing TrendingTopic type from the codebase will be extended with platform and product information
+
+CampaignPlatform enum will be imported from existing campaign types
+
+Service Layer API
+Package Location: packages/hooks/src/trends/
+
+New Hooks:
+
+useTrendsWithFilters(): Fetches filtered trends data using @tanstack/react-query, caches under ['trends', brandId, filters]. Returns enhanced trending topics with platform and product data.
+
+useProductOptions(): Fetches available products for the filter dropdown, cached under ['brand-products', brandId].
+
+usePlatformOptions(): Returns static platform options based on campaign_platform_enum.
+
+Dependencies on Existing Services:
+
+Will import and use @boastitup/supabase/client for database operations
+
+Will integrate with existing tenant/brand context from brandStore
+
+State Management (Zustand)
+Location: apps/web/store/trendsStore.ts
+
+Approach: Extend the existing TrendSurgeDetector state management or create a new trends-specific store for filter state management.
+
+State Managed:
+
+selectedPlatforms: CampaignPlatform[]
+
+selectedProductId: string | null
+
+activeFilters: TrendFilterOptions
+
+isFilterPanelOpen: boolean
+
+Core UI Components
+Enhanced Components (apps/web/components/trends/)
+TrendSurgeDetector (apps/web/components/TrendSurgeDetector.tsx)
+
+Responsibility: Enhanced version of existing component with new filter controls
+
+New Props: 
+
+
+
+interface TrendSurgeDetectorProps {  className?: string;  enablePlatformFilter?: boolean;  enableProductFilter?: boolean;  defaultFilters?: Partial<TrendFilterOptions>;}
+TrendFilterPanel (apps/web/components/trends/TrendFilterPanel.tsx)
+
+Responsibility: New component to house the platform multi-select and product single-select filters
+
+Features: Uses existing Select patterns from OKRFilters.tsx
+
+Reusable Core Components (from @boastitup/ui)
+Select (packages/ui/src/components/ui/select.tsx): Multi-select for platforms, single-select for products Badge (packages/ui/src/components/ui/badge.tsx): Display active filter indicators Button, Card (packages/ui/src/components/ui/): Consistent with existing filter patterns
+
+Package UI Components (from shadcn/ui via @boastitup/ui)
+All UI primitives accessed through @boastitup/ui package, maintaining design system consistency.
+
+Validation Schemas
+Location: packages/hooks/src/trends/schemas.ts
+
+New Schemas:
+
+
+
+export const trendFiltersSchema = z.object({
+  platforms: z.array(z.enum(['facebook', 'instagram', 'google_ads', 'tiktok', 'twitter', 'linkedin', 'pinterest'])),
+  productId: z.string().uuid().optional(),
+  category: z.string().optional(),
+  trendType: z.string().optional(),
+  minVolume: z.number().min(0).optional(),
+});
+Business Logic
+Core Logic Flows:
+
+Filter Application: When users select platforms or products, the query parameters are updated and passed to the Supabase view query
+
+Multi-Select Platform Logic: Users can select multiple platforms, with results showing trends that match ANY of the selected platforms
+
+Single-Select Product Logic: Only one product can be selected at a time, showing trends specifically related to that product
+
+Integration with Existing Trends: The enhanced filtering works with existing trend sorting, search, and category filters
+
+File Structure
+Adherence: The proposed file structure conforms to the established Turborepo monorepo conventions:
+
+
+
+# Turborepo Structure
+apps/web/
+├── components/trends/           # Enhanced trend components
+│   ├── TrendFilterPanel.tsx     # New filter component
+│   ├── EnhancedTrendCard.tsx    # Enhanced trend display
+│   └── PlatformBadge.tsx        # Platform indicator component
+├── store/trendsStore.ts         # Zustand store for filters
+└── components/                  # Existing components
+    └── TrendSurgeDetector.tsx   # Enhanced existing component
+packages/hooks/src/trends/       # New trends package
+├── useTrendsWithFilters.ts      # Main filtered trends hook
+├── useProductOptions.ts         # Product dropdown data
+├── usePlatformOptions.ts        # Platform options hook
+└── schemas.ts                   # Validation schemas
+packages/types/src/              # Enhanced types
+├── trends.types.ts              # New trend filtering types
+└── index.ts                     # Export new types
+packages/supabase/               # Database operations
+├── migrations/                  # View enhancement migration
+│   └── [timestamp]_enhance_trending_topics_view.sql
+└── client.ts                    # Enhanced client operations
+Adherence to Project Standards
+Error Handling
+Will use existing error handling patterns from @boastitup/hooks and existing TrendSurgeDetector component
+
+Toast notifications will follow existing UI patterns from @boastitup/ui components
+
+Filter validation errors handled gracefully with user-friendly messages
+
+Performance
+Caching Strategy: React Query caches with appropriate stale times for trend data
+
+Filter Debouncing: Platform and product filter changes debounced to prevent excessive API calls
+
+Selective Re-renders: Only affected components re-render when filters change
+
+Lazy Loading: Trend details loaded on-demand when cards are expanded
+
+Security
+RLS Policies: Existing RLS policies on unified_trends table ensure proper data isolation
+
+Input Validation: All filter inputs validated using Zod schemas
+
+SQL Injection Prevention: All queries use parameterized queries through Supabase client
+
+Package Dependencies
+Internal Package Usage:
+
+@boastitup/ui for all filter UI components and existing trend display components
+
+@boastitup/hooks for new trend filtering hooks following existing patterns
+
+@boastitup/supabase/client for enhanced database operations
+
+@boastitup/types for new filtering type definitions
+
+External Dependencies: No new external dependencies required - leveraging existing React Query, Zod, and Zustand implementations.
+
+Key Integration Tests
+Location: apps/web/__tests__/trends/integration.test.ts
+
+Filter Integration Test: Test that platform and product filters correctly filter the trending topics results
+
+Multi-tenant Filter Test: Ensure filters respect tenant boundaries and don't show cross-tenant data
+
+Performance Test: Verify that rapid filter changes don't cause excessive re-renders or API calls
+
+State Management Test: Test that filter state persists correctly across component re-mounts
+
+UI Integration Test: Test that existing trend display components work correctly with new filtered data
+
+Turborepo-Specific Considerations
+Build Dependencies
+Existing Dependencies: No changes to turbo.json required as new hooks package will follow existing patterns
+
+Package Boundaries: New trends hooks properly isolated in packages/hooks/src/trends/
+
+Package Versioning
+All internal package references use workspace:* versioning
+
+Follow existing patterns for package.json exports and main fields
+
+Development Workflow
+Use turbo dev --filter=web for focused development on the enhanced component
+
+Lint across packages with turbo lint to ensure consistency
+
+Type checking with turbo check-types across all packages including new types
+
+This enhanced Trends & Hashtags feature seamlessly integrates with the existing codebase architecture, reusing established patterns while providing the new filtering capabilities requested. The design maintains consistency with existing components like OKRFilters and TrendSurgeDetector, ensuring a cohesive user experience across the application.
+

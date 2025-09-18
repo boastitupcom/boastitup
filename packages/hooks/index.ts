@@ -21,3 +21,6 @@ export * from './src/okr/state/use-customization-state';
 
 // OKR hooks - Performance layer
 export * from './src/okr/performance/use-virtual-list';
+
+// Campaign hooks
+export * from './src/campaigns';

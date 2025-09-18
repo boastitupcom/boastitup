@@ -193,3 +193,6 @@ export interface ProgressCalculation {
 
 // Export competitor intelligence types
 export * from './src/competitor-intelligence.types';
+
+// Export campaign types
+export * from './src/campaigns.types';

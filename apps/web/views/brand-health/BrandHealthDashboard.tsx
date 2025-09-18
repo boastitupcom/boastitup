@@ -276,6 +276,7 @@ export default function BrandHealthDashboard({ brandId, tenantId, userId }: Bran
             score={brandHealthScore?.brand_health_score || 0}
             isLoading={scoreLoading}
             size="lg"
+            brandHealthData={brandHealthScore}
           />
         </div>
 

@@ -14,21 +14,37 @@ export type ActionPriority = 'high' | 'medium' | 'low';
 export type ImpactLevel = 'High' | 'Medium' | 'Low';
 export type PriorityDisplay = 'CRITICAL PRIORITY' | 'HIGH PRIORITY' | 'MEDIUM PRIORITY' | 'LOW PRIORITY';
 
-// Brand Health Score from v_brand_health_scores
+// Brand Health Score from v_brand_health_scores - matches actual database structure
 export interface BrandHealthScore {
-  id: string;
   brand_id: string;
   tenant_id: string;
-  brand_health_score: number;
-  calculation_date: string;
+  date_id?: number;
+  brand_name?: string;
+  mentions?: number;
+  total_reach?: number;
+  total_engagements?: number;
+  engagement_rate?: number;
   sentiment_score: number;
-  engagement_rate_score: number;
-  reach_score: number;
-  mentions_velocity_score: number;
-  engagement_volume_score: number;
-  components_calculated: number;
-  calculation_metadata: Record<string, any>;
-  created_at: string;
+  normalized_sentiment_score?: number;
+  normalized_engagement_rate_score?: number;
+  normalized_reach_score?: number;
+  normalized_mentions_velocity_score?: number;
+  normalized_engagement_volume_score?: number;
+  brand_health_score: number; // This will be normalized to 0-100 by the service
+  adjusted_brand_health_score?: number;
+  ai_insight_impact_score?: number;
+  lookback_days?: number;
+  crisis_threshold_multiplier?: number;
+  min_mentions_for_sentiment?: number;
+  config_is_active?: boolean;
+  config_updated_at?: string;
+  insight_title?: string;
+  insight_description?: string;
+  // Additional computed fields for UI
+  engagement_rate_score?: number;
+  reach_score?: number;
+  mentions_velocity_score?: number;
+  engagement_volume_score?: number;
 }
 
 // Core insight from ai_insights_v1 table

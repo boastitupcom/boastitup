@@ -2,13 +2,17 @@
 "use client";
 
 import React from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Plus } from 'lucide-react';
 import type { TrendingTopic } from '@boastitup/types';
-import { formatTrendVolume } from '@boastitup/hooks/src/competitor-intelligence';
+import { formatTrendVolume, useTrendingTopics } from '@boastitup/hooks/src/competitor-intelligence';
+import { useBrandStore } from '../../store/brandStore';
+import { Button } from '@boastitup/ui';
 
 interface TrendingTopicsPanelProps {
-  topics: TrendingTopic[];
-  isLoading: boolean;
+  campaignId: string;
+  onAddToAvailable: (hashtag: string, source: 'trending') => void;
+  topics?: TrendingTopic[];
+  isLoading?: boolean;
   onTopicSelect?: (topic: TrendingTopic) => void;
   className?: string;
 }
@@ -43,10 +47,19 @@ const EmptyTrendingTopicsState = () => (
 const TrendingTopicItem: React.FC<{
   topic: TrendingTopic;
   onSelect?: (topic: TrendingTopic) => void;
-}> = ({ topic, onSelect }) => {
+  onAddToAvailable?: (hashtag: string, source: 'trending') => void;
+  campaignId?: string;
+}> = ({ topic, onSelect, onAddToAvailable, campaignId }) => {
   const handleClick = () => {
     if (onSelect) {
       onSelect(topic);
+    }
+  };
+
+  const handleAddClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onAddToAvailable && (topic.hashtag_display || topic.trend_name)) {
+      onAddToAvailable(topic.hashtag_display || topic.trend_name, 'trending');
     }
   };
 
@@ -72,36 +85,58 @@ const TrendingTopicItem: React.FC<{
           )}
         </div>
       </div>
-      <div className="text-right flex-shrink-0 ml-2">
-        <div className="flex flex-col items-end">
-          <span className={`text-sm font-medium ${
-            topic.growth_percentage > 30 ? 'text-green-600' :
-            topic.growth_percentage > 15 ? 'text-orange-600' : 'text-gray-600'
-          }`}>
-            +{topic.growth_percentage.toFixed(0)}%
-          </span>
-          <div className="flex items-center justify-end gap-1 text-xs">
-            <span className="text-gray-500">
-              {formatTrendVolume(topic.volume)}
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        <div className="text-right">
+          <div className="flex flex-col items-end">
+            <span className={`text-sm font-medium ${
+              topic.growth_percentage > 30 ? 'text-green-600' :
+              topic.growth_percentage > 15 ? 'text-orange-600' : 'text-gray-600'
+            }`}>
+              +{topic.growth_percentage.toFixed(0)}%
             </span>
-            {topic.sentiment_score !== undefined && (
-              <span className="text-gray-400">
-                {topic.sentiment_score > 0.3 ? '😊' : topic.sentiment_score < -0.3 ? '😕' : '😐'}
+            <div className="flex items-center justify-end gap-1 text-xs">
+              <span className="text-gray-500">
+                {formatTrendVolume(topic.volume)}
               </span>
-            )}
+              {topic.sentiment_score !== undefined && (
+                <span className="text-gray-400">
+                  {topic.sentiment_score > 0.3 ? '😊' : topic.sentiment_score < -0.3 ? '😕' : '😐'}
+                </span>
+              )}
+            </div>
           </div>
         </div>
+        {campaignId && onAddToAvailable && (
+          <Button
+            size="sm"
+            variant="default"
+            onClick={handleAddClick}
+            className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+            title="Add to available hashtags"
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            Add
+          </Button>
+        )}
       </div>
     </div>
   );
 };
 
 export const TrendingTopicsPanel: React.FC<TrendingTopicsPanelProps> = ({
-  topics,
-  isLoading,
+  campaignId,
+  onAddToAvailable,
+  topics: propTopics,
+  isLoading: propIsLoading,
   onTopicSelect,
   className = ""
 }) => {
+  const { activeBrand } = useBrandStore();
+  const { data: fetchedTopics = [], isLoading: fetchedIsLoading } = useTrendingTopics(activeBrand?.id);
+  
+  // Use fetched data if no props provided (as per change.txt specs)
+  const topics = propTopics || fetchedTopics;
+  const isLoading = propIsLoading !== undefined ? propIsLoading : fetchedIsLoading;
   if (isLoading) {
     return (
       <div className={`bg-orange-50 border border-orange-200 rounded-lg p-4 ${className}`}>
@@ -139,6 +174,8 @@ export const TrendingTopicsPanel: React.FC<TrendingTopicsPanelProps> = ({
             key={topic.id}
             topic={topic}
             onSelect={onTopicSelect}
+            campaignId={campaignId}
+            onAddToAvailable={onAddToAvailable}
           />
         ))}
       </div>

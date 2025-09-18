@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { BrandHealthService } from '@/services/brand-health-service';
-import type { InsightData } from '@/types/brand-health.types';
+import { BrandHealthService, type InsightData } from './brandHealthService';
 
 export const useInsightsByCategory = (brandId: string, tenantId: string) => {
   return useQuery<InsightData[], Error>({

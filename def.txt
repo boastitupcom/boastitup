@@ -1,0 +1,400 @@
+create view public.view_campaign_goal_roi as
+select
+  c.brand_id,
+  upm.product_id,
+  c.campaign_goals,
+  sum(upm.attributed_revenue) as total_revenue,
+  sum(c.campaign_budget_allocated + upm.marketing_spend) as total_investment,
+  (
+    sum(upm.attributed_revenue) - sum(c.campaign_budget_allocated + upm.marketing_spend)
+  ) / sum(c.campaign_budget_allocated + upm.marketing_spend) as roi
+from
+  campaigns c
+  join unified_performance_metrics_v1 upm on c.id = upm.campaign_id
+group by
+  c.brand_id,
+  upm.product_id,
+  c.campaign_goals;
+
+  create view public.view_campaign_type_performance as
+select
+  c.brand_id,
+  upm.product_id,
+  c.campaign_type as campaign_type_enum,
+  count(distinct c.id) as number_of_campaigns,
+  sum(upm.attributed_revenue) as total_revenue,
+  sum(c.campaign_budget_allocated + upm.marketing_spend) as total_investment,
+  (
+    sum(upm.attributed_revenue) - sum(c.campaign_budget_allocated + upm.marketing_spend)
+  ) / NULLIF(
+    sum(c.campaign_budget_allocated + upm.marketing_spend),
+    0::numeric
+  ) as roi,
+  sum(upm.total_impressions) as total_impressions,
+  sum(upm.total_reach) as total_reach,
+  sum(upm.total_likes) as total_likes,
+  sum(upm.total_comments) as total_comments,
+  sum(upm.total_shares) as total_shares,
+  sum(upm.conversions) as total_conversions,
+  sum(c.campaign_budget_allocated + upm.marketing_spend) / NULLIF(sum(upm.conversions), 0)::numeric as cost_per_conversion
+from
+  campaigns c
+  join unified_performance_metrics_v1 upm on c.id = upm.campaign_id
+where
+  c.is_deleted = false
+group by
+  c.brand_id,
+  upm.product_id,
+  c.campaign_type;
+
+  create table public.campaigns (
+  id uuid not null default gen_random_uuid (),
+  tenant_id uuid not null,
+  brand_id uuid not null,
+  campaign_name character varying(255) not null,
+  campaign_description text null,
+  campaign_status public.campaign_status_enum not null default 'draft'::campaign_status_enum,
+  campaign_start_date timestamp with time zone null,
+  campaign_end_date timestamp with time zone null,
+  campaign_budget_allocated numeric null,
+  campaign_goals public.campaign_goals_enum null,
+  campaign_confidence_score numeric null,
+  campaign_predicted_reach_min integer null,
+  campaign_predicted_reach_max integer null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  created_by uuid not null,
+  updated_by uuid null,
+  is_deleted boolean not null default false,
+  product_id uuid null,
+  campaign_type public.campaign_type_enum null,
+  campaign_platform public.campaign_platform_enum null,
+  constraint campaigns_pkey primary key (id),
+  constraint campaigns_updated_by_fkey foreign KEY (updated_by) references auth.users (id),
+  constraint campaigns_created_by_fkey foreign KEY (created_by) references auth.users (id),
+  constraint campaigns_product_id_fkey foreign KEY (product_id) references brand_products (id),
+  constraint campaigns_tenant_fkey foreign KEY (tenant_id) references tenants (id),
+  constraint campaigns_brand_fkey foreign KEY (brand_id) references brands (id),
+  constraint campaigns_campaign_confidence_score_check check (
+    (
+      (campaign_confidence_score >= (0)::numeric)
+      and (campaign_confidence_score <= (100)::numeric)
+    )
+  ),
+  constraint campaigns_reach_check check (
+    (
+      (campaign_predicted_reach_min is null)
+      or (campaign_predicted_reach_max is null)
+      or (
+        campaign_predicted_reach_max >= campaign_predicted_reach_min
+      )
+    )
+  ),
+  constraint campaigns_date_check check (
+    (
+      (campaign_start_date is null)
+      or (campaign_end_date is null)
+      or (campaign_start_date < campaign_end_date)
+    )
+  ),
+  constraint campaigns_campaign_budget_allocated_check check (
+    (
+      (campaign_budget_allocated is null)
+      or (campaign_budget_allocated > (0)::numeric)
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_campaigns_tenant_brand on public.campaigns using btree (tenant_id, brand_id) TABLESPACE pg_default;
+
+create index IF not exists idx_campaigns_status on public.campaigns using btree (campaign_status) TABLESPACE pg_default;
+
+create index IF not exists idx_campaigns_created_at on public.campaigns using btree (created_at desc) TABLESPACE pg_default;
+
+create index IF not exists idx_campaigns_dates on public.campaigns using btree (campaign_start_date, campaign_end_date) TABLESPACE pg_default;
+
+create index IF not exists idx_campaigns_brand on public.campaigns using btree (brand_id) TABLESPACE pg_default;
+
+create view public.campaign_insights_by_competitor as
+select
+  c.campaign_type as campaign_type_enum,
+  c.brand_id,
+  upm.product_id,
+  bc.competitor_id,
+  avg(
+    case
+      when fcmv.metric_type = 'engagement_rate'::metric_type_enum then fcmv.value
+      else null::numeric
+    end
+  ) as competitor_avg_engagement,
+  avg(
+    case
+      when fcmv.metric_type = 'campaign_spend'::metric_type_enum then fcmv.value
+      else null::numeric
+    end
+  ) as competitor_avg_spend,
+  avg(upm.average_engagement_rate) as avg_engagement_rate,
+  sum(upm.marketing_spend) as total_marketing_spend,
+  sum(upm.attributed_revenue) as total_attributed_revenue,
+  sum(upm.attributed_revenue) / sum(upm.marketing_spend) as roi
+from
+  campaigns c
+  join unified_performance_metrics_v1 upm on c.id = upm.campaign_id
+  join brand_competitors bc on c.brand_id = bc.brand_id
+  join fact_competitor_metric_value_v1 fcmv on bc.competitor_id = fcmv.competitor_id
+where
+  bc.include_for_avg = true
+group by
+  c.campaign_type,
+  c.brand_id,
+  upm.product_id,
+  bc.competitor_id;
+
+  [
+  {
+    "definition_type": "-- ENUM TYPES",
+    "object_name": "campaign_platform_enum",
+    "definition": "CREATE TYPE campaign_platform_enum AS ENUM ('facebook', 'instagram', 'google_ads', 'tiktok', 'twitter', 'linkedin', 'pinterest');",
+    "sort_order": 1
+  },
+  {
+    "definition_type": "-- ENUM TYPES",
+    "object_name": "campaign_type_enum",
+    "definition": "CREATE TYPE campaign_type_enum AS ENUM ('organic', 'hybrid', 'paid');",
+    "sort_order": 1
+  },
+  {
+    "definition_type": "-- ENUM TYPES",
+    "object_name": "trend_status",
+    "definition": "CREATE TYPE trend_status AS ENUM ('opportunity', 'tracking', 'acting', 'completed', 'declined');",
+    "sort_order": 1
+  },
+  {
+    "definition_type": "-- TABLE DEFINITIONS",
+    "object_name": "ai_recommended_actions_v1",
+    "definition": "CREATE TABLE ai_recommended_actions_v1 (\n  id UUID NOT NULL DEFAULT gen_random_uuid(),\n  insight_id UUID NOT NULL,\n  suggested_action_text TEXT NOT NULL,\n  action_priority VARCHAR(20) NOT NULL,\n  action_description TEXT,\n  stage VARCHAR(30) NOT NULL DEFAULT 'new'::character varying,\n  viewed_at TIMESTAMPTZ,\n  viewed_by UUID,\n  saved_at TIMESTAMPTZ,\n  saved_by UUID,\n  actioned_at TIMESTAMPTZ,\n  actioned_by UUID,\n  assigned_to_campaign_id UUID,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),\n  okr_objective_id UUID,\n  action_confidence_score NUMERIC(3,2),\n  action_impact_score INTEGER,\n  campaign_created_at TIMESTAMPTZ,\n  suggested_hashtags TEXT,\n  suggested_action_type action_type_enum,\n  suggested_target_audience _target_audience_enum,\n  suggested_engagement_objective campaign_goals_enum,\n  suggested_campaign_type campaign_type_enum,\n  suggested_platforms _platform_enum\n);",
+    "sort_order": 2
+  },
+  {
+    "definition_type": "-- TABLE DEFINITIONS",
+    "object_name": "brand_products",
+    "definition": "CREATE TABLE brand_products (\n  id UUID NOT NULL DEFAULT gen_random_uuid(),\n  brand_id UUID NOT NULL,\n  description TEXT,\n  is_active BOOLEAN DEFAULT true,\n  created_at TIMESTAMPTZ DEFAULT now(),\n  updated_at TIMESTAMPTZ DEFAULT now()\n);",
+    "sort_order": 2
+  },
+  {
+    "definition_type": "-- TABLE DEFINITIONS",
+    "object_name": "brands",
+    "definition": "CREATE TABLE brands (\n  id UUID NOT NULL DEFAULT gen_random_uuid(),\n  tenant_id UUID NOT NULL,\n  name VARCHAR(255) NOT NULL,\n  slug VARCHAR(100) NOT NULL,\n  description TEXT,\n  logo_url TEXT,\n  brand_colors JSONB DEFAULT '{}'::jsonb,\n  is_active BOOLEAN DEFAULT true,\n  created_at TIMESTAMPTZ DEFAULT now(),\n  updated_at TIMESTAMPTZ DEFAULT now(),\n  primary_domain VARCHAR(255),\n  industry_id UUID,\n  currency_code VARCHAR(3),\n  currency_symbol VARCHAR(5)\n);",
+    "sort_order": 2
+  },
+  {
+    "definition_type": "-- TABLE DEFINITIONS",
+    "object_name": "campaigns",
+    "definition": "CREATE TABLE campaigns (\n  id UUID NOT NULL DEFAULT gen_random_uuid(),\n  tenant_id UUID NOT NULL,\n  brand_id UUID NOT NULL,\n  campaign_name VARCHAR(255) NOT NULL,\n  campaign_description TEXT,\n  campaign_status campaign_status_enum NOT NULL DEFAULT 'draft'::campaign_status_enum,\n  campaign_start_date TIMESTAMPTZ,\n  campaign_end_date TIMESTAMPTZ,\n  campaign_goals campaign_goals_enum,\n  campaign_predicted_reach_min INTEGER,\n  campaign_predicted_reach_max INTEGER,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),\n  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),\n  created_by UUID NOT NULL,\n  updated_by UUID,\n  is_deleted BOOLEAN NOT NULL DEFAULT false,\n  product_id UUID,\n  campaign_type campaign_type_enum,\n  campaign_platform campaign_platform_enum\n);",
+    "sort_order": 2
+  },
+  {
+    "definition_type": "-- TABLE DEFINITIONS",
+    "object_name": "unified_performance_metrics_v1",
+    "definition": "CREATE TABLE unified_performance_metrics_v1 (\n  id UUID NOT NULL DEFAULT gen_random_uuid(),\n  tenant_id UUID NOT NULL,\n  brand_id UUID NOT NULL,\n  campaign_id UUID,\n  metric_date DATE NOT NULL DEFAULT CURRENT_DATE,\n  total_reach BIGINT DEFAULT 0,\n  total_impressions BIGINT DEFAULT 0,\n  total_likes INTEGER DEFAULT 0,\n  total_comments INTEGER DEFAULT 0,\n  total_shares INTEGER DEFAULT 0,\n  total_saves INTEGER DEFAULT 0,\n  conversions INTEGER DEFAULT 0,\n  sessions INTEGER DEFAULT 0,\n  created_at TIMESTAMPTZ DEFAULT now(),\n  updated_at TIMESTAMPTZ DEFAULT now(),\n  product_id UUID\n);",
+    "sort_order": 2
+  },
+  {
+    "definition_type": "-- TABLE DEFINITIONS",
+    "object_name": "unified_trends",
+    "definition": "CREATE TABLE unified_trends (\n  id UUID NOT NULL DEFAULT gen_random_uuid(),\n  tenant_id UUID NOT NULL,\n  brand_id UUID,\n  trend_type trend_source_type NOT NULL,\n  category_id UUID,\n  subcategory_id UUID,\n  volume INTEGER NOT NULL DEFAULT 0,\n  volume_change_24h INTEGER DEFAULT 0,\n  volume_change_7d INTEGER DEFAULT 0,\n  velocity_category trend_velocity NOT NULL DEFAULT 'steady'::trend_velocity,\n  race_position INTEGER DEFAULT 0,\n  opportunity_score INTEGER DEFAULT 0,\n  primary_platform social_platform,\n  related_hashtags _varchar,\n  related_keywords _varchar,\n  trend_date DATE NOT NULL DEFAULT CURRENT_DATE,\n  trend_start_date DATE,\n  status trend_status DEFAULT 'opportunity'::trend_status,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),\n  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),\n  product_id UUID\n);",
+    "sort_order": 2
+  },
+  {
+    "definition_type": "-- PRIMARY KEY CONSTRAINTS",
+    "object_name": "ai_recommended_actions_v1",
+    "definition": "ALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT ai_recommended_actions_v1_pkey PRIMARY KEY (id);",
+    "sort_order": 4
+  },
+  {
+    "definition_type": "-- PRIMARY KEY CONSTRAINTS",
+    "object_name": "brand_products",
+    "definition": "ALTER TABLE brand_products ADD CONSTRAINT products_pkey PRIMARY KEY (id);",
+    "sort_order": 4
+  },
+  {
+    "definition_type": "-- PRIMARY KEY CONSTRAINTS",
+    "object_name": "brands",
+    "definition": "ALTER TABLE brands ADD CONSTRAINT brands_pkey PRIMARY KEY (id);",
+    "sort_order": 4
+  },
+  {
+    "definition_type": "-- PRIMARY KEY CONSTRAINTS",
+    "object_name": "campaigns",
+    "definition": "ALTER TABLE campaigns ADD CONSTRAINT campaigns_pkey PRIMARY KEY (id);",
+    "sort_order": 4
+  },
+  {
+    "definition_type": "-- PRIMARY KEY CONSTRAINTS",
+    "object_name": "unified_performance_metrics_v1",
+    "definition": "ALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT unified_performance_metrics_v1_pkey PRIMARY KEY (id);",
+    "sort_order": 4
+  },
+  {
+    "definition_type": "-- PRIMARY KEY CONSTRAINTS",
+    "object_name": "unified_trends",
+    "definition": "ALTER TABLE unified_trends ADD CONSTRAINT unified_trends_pkey PRIMARY KEY (id);",
+    "sort_order": 4
+  },
+  {
+    "definition_type": "-- FOREIGN KEY CONSTRAINTS",
+    "object_name": "ai_recommended_actions_v1",
+    "definition": "ALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT ai_recommended_actions_v1_campaign_fkey FOREIGN KEY (assigned_to_campaign_id) REFERENCES campaigns(id);\nALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT ai_recommended_actions_v1_insight_fkey FOREIGN KEY (insight_id) REFERENCES ai_insights_v1(id);\nALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT ai_recommended_actions_v1_okr_objective_id_fkey FOREIGN KEY (okr_objective_id) REFERENCES okr_objectives(id);",
+    "sort_order": 5
+  },
+  {
+    "definition_type": "-- FOREIGN KEY CONSTRAINTS",
+    "object_name": "brand_products",
+    "definition": "ALTER TABLE brand_products ADD CONSTRAINT products_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES brands(id);",
+    "sort_order": 5
+  },
+  {
+    "definition_type": "-- FOREIGN KEY CONSTRAINTS",
+    "object_name": "brands",
+    "definition": "ALTER TABLE brands ADD CONSTRAINT brands_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES industries(id);\nALTER TABLE brands ADD CONSTRAINT brands_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);",
+    "sort_order": 5
+  },
+  {
+    "definition_type": "-- FOREIGN KEY CONSTRAINTS",
+    "object_name": "campaigns",
+    "definition": "ALTER TABLE campaigns ADD CONSTRAINT campaigns_brand_fkey FOREIGN KEY (brand_id) REFERENCES brands(id);\nALTER TABLE campaigns ADD CONSTRAINT campaigns_product_id_fkey FOREIGN KEY (product_id) REFERENCES brand_products(id);\nALTER TABLE campaigns ADD CONSTRAINT campaigns_tenant_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);",
+    "sort_order": 5
+  },
+  {
+    "definition_type": "-- FOREIGN KEY CONSTRAINTS",
+    "object_name": "unified_performance_metrics_v1",
+    "definition": "ALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT unified_performance_metrics_v1_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES brands(id);\nALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT unified_performance_metrics_v1_campaign_id_fkey FOREIGN KEY (campaign_id) REFERENCES campaigns(id);\nALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT unified_performance_metrics_v1_product_id_fkey FOREIGN KEY (product_id) REFERENCES brand_products(id);\nALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT unified_performance_metrics_v1_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);",
+    "sort_order": 5
+  },
+  {
+    "definition_type": "-- FOREIGN KEY CONSTRAINTS",
+    "object_name": "unified_trends",
+    "definition": "ALTER TABLE unified_trends ADD CONSTRAINT unified_trends_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES brands(id);\nALTER TABLE unified_trends ADD CONSTRAINT unified_trends_category_id_fkey FOREIGN KEY (category_id) REFERENCES categories(id);\nALTER TABLE unified_trends ADD CONSTRAINT unified_trends_product_id_fkey FOREIGN KEY (product_id) REFERENCES brand_products(id);\nALTER TABLE unified_trends ADD CONSTRAINT unified_trends_subcategory_id_fkey FOREIGN KEY (subcategory_id) REFERENCES subcategories(id);\nALTER TABLE unified_trends ADD CONSTRAINT unified_trends_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);",
+    "sort_order": 5
+  },
+  {
+    "definition_type": "-- UNIQUE CONSTRAINTS",
+    "object_name": "brand_products",
+    "definition": "ALTER TABLE brand_products ADD CONSTRAINT brand_products_sku_key UNIQUE (sku);",
+    "sort_order": 6
+  },
+  {
+    "definition_type": "-- UNIQUE CONSTRAINTS",
+    "object_name": "brands",
+    "definition": "ALTER TABLE brands ADD CONSTRAINT brands_tenant_id_slug_key UNIQUE (tenant_id, slug);",
+    "sort_order": 6
+  },
+  {
+    "definition_type": "-- UNIQUE CONSTRAINTS",
+    "object_name": "unified_performance_metrics_v1",
+    "definition": "ALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT unified_performance_metrics_v1_unique_daily UNIQUE (tenant_id, brand_id, campaign_id, metric_date, platform);",
+    "sort_order": 6
+  },
+  {
+    "definition_type": "-- CHECK CONSTRAINTS",
+    "object_name": "ai_recommended_actions_v1",
+    "definition": "ALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT 2200_60808_14_not_null CHECK created_at IS NOT NULL;\nALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT ai_recommended_actions_v1_stage_check CHECK ((stage)::text = ANY (ARRAY['new'::text, 'viewed'::text, 'saved'::text, 'selected_for_action'::text, 'in_progress'::text, 'actioned'::text]));\nALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT 2200_60808_1_not_null CHECK id IS NOT NULL;\nALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT 2200_60808_2_not_null CHECK insight_id IS NOT NULL;\nALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT 2200_60808_3_not_null CHECK suggested_action_text IS NOT NULL;\nALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT 2200_60808_4_not_null CHECK action_priority IS NOT NULL;\nALTER TABLE ai_recommended_actions_v1 ADD CONSTRAINT 2200_60808_6_not_null CHECK stage IS NOT NULL;",
+    "sort_order": 7
+  },
+  {
+    "definition_type": "-- CHECK CONSTRAINTS",
+    "object_name": "brand_products",
+    "definition": "ALTER TABLE brand_products ADD CONSTRAINT 2200_53468_3_not_null CHECK name IS NOT NULL;\nALTER TABLE brand_products ADD CONSTRAINT 2200_53468_1_not_null CHECK id IS NOT NULL;\nALTER TABLE brand_products ADD CONSTRAINT 2200_53468_2_not_null CHECK brand_id IS NOT NULL;",
+    "sort_order": 7
+  },
+  {
+    "definition_type": "-- CHECK CONSTRAINTS",
+    "object_name": "brands",
+    "definition": "ALTER TABLE brands ADD CONSTRAINT 2200_17342_3_not_null CHECK name IS NOT NULL;\nALTER TABLE brands ADD CONSTRAINT 2200_17342_1_not_null CHECK id IS NOT NULL;\nALTER TABLE brands ADD CONSTRAINT 2200_17342_2_not_null CHECK tenant_id IS NOT NULL;\nALTER TABLE brands ADD CONSTRAINT 2200_17342_4_not_null CHECK slug IS NOT NULL;",
+    "sort_order": 7
+  },
+  {
+    "definition_type": "-- CHECK CONSTRAINTS",
+    "object_name": "campaigns",
+    "definition": "ALTER TABLE campaigns ADD CONSTRAINT 2200_69005_16_not_null CHECK updated_at IS NOT NULL;\nALTER TABLE campaigns ADD CONSTRAINT campaigns_campaign_budget_allocated_check CHECK ((campaign_budget_allocated IS NULL) OR (campaign_budget_allocated > (0)::numeric));\nALTER TABLE campaigns ADD CONSTRAINT campaigns_campaign_confidence_score_check CHECK ((campaign_confidence_score >= (0)::numeric) AND (campaign_confidence_score <= (100)::numeric));\nALTER TABLE campaigns ADD CONSTRAINT campaigns_date_check CHECK ((campaign_start_date IS NULL) OR (campaign_end_date IS NULL) OR (campaign_start_date < campaign_end_date));\nALTER TABLE campaigns ADD CONSTRAINT campaigns_reach_check CHECK ((campaign_predicted_reach_min IS NULL) OR (campaign_predicted_reach_max IS NULL) OR (campaign_predicted_reach_max >= campaign_predicted_reach_min));\nALTER TABLE campaigns ADD CONSTRAINT 2200_69005_1_not_null CHECK id IS NOT NULL;\nALTER TABLE campaigns ADD CONSTRAINT 2200_69005_2_not_null CHECK tenant_id IS NOT NULL;\nALTER TABLE campaigns ADD CONSTRAINT 2200_69005_3_not_null CHECK brand_id IS NOT NULL;\nALTER TABLE campaigns ADD CONSTRAINT 2200_69005_4_not_null CHECK campaign_name IS NOT NULL;\nALTER TABLE campaigns ADD CONSTRAINT 2200_69005_7_not_null CHECK campaign_status IS NOT NULL;\nALTER TABLE campaigns ADD CONSTRAINT 2200_69005_15_not_null CHECK created_at IS NOT NULL;\nALTER TABLE campaigns ADD CONSTRAINT 2200_69005_17_not_null CHECK created_by IS NOT NULL;\nALTER TABLE campaigns ADD CONSTRAINT 2200_69005_19_not_null CHECK is_deleted IS NOT NULL;",
+    "sort_order": 7
+  },
+  {
+    "definition_type": "-- CHECK CONSTRAINTS",
+    "object_name": "unified_performance_metrics_v1",
+    "definition": "ALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT 2200_71356_2_not_null CHECK tenant_id IS NOT NULL;\nALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT 2200_71356_3_not_null CHECK brand_id IS NOT NULL;\nALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT 2200_71356_5_not_null CHECK metric_date IS NOT NULL;\nALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT 2200_71356_7_not_null CHECK metric_category IS NOT NULL;\nALTER TABLE unified_performance_metrics_v1 ADD CONSTRAINT 2200_71356_1_not_null CHECK id IS NOT NULL;",
+    "sort_order": 7
+  },
+  {
+    "definition_type": "-- CHECK CONSTRAINTS",
+    "object_name": "unified_trends",
+    "definition": "ALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_2_not_null CHECK tenant_id IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_4_not_null CHECK trend_name IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT unified_trends_velocity_score_check CHECK ((velocity_score >= 0.0) AND (velocity_score <= 1.0));\nALTER TABLE unified_trends ADD CONSTRAINT unified_trends_sentiment_score_check CHECK ((sentiment_score >= '-1.0'::numeric) AND (sentiment_score <= 1.0));\nALTER TABLE unified_trends ADD CONSTRAINT unified_trends_opportunity_score_check CHECK ((opportunity_score >= 0) AND (opportunity_score <= 100));\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_5_not_null CHECK trend_type IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_8_not_null CHECK volume IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_9_not_null CHECK growth_percentage IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_12_not_null CHECK velocity_score IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_22_not_null CHECK trend_date IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_13_not_null CHECK velocity_category IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT unified_trends_confidence_score_check CHECK ((confidence_score >= 0.0) AND (confidence_score <= 1.0));\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_25_not_null CHECK created_at IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_26_not_null CHECK updated_at IS NOT NULL;\nALTER TABLE unified_trends ADD CONSTRAINT 2200_76980_1_not_null CHECK id IS NOT NULL;",
+    "sort_order": 7
+  },
+  {
+    "definition_type": "-- INDEXES",
+    "object_name": "ai_recommended_actions_v1",
+    "definition": "CREATE UNIQUE INDEX ai_recommended_actions_v1_pkey ON public.ai_recommended_actions_v1 USING btree (id);\nCREATE INDEX idx_ai_actions_campaign_id ON public.ai_recommended_actions_v1 USING btree (assigned_to_campaign_id);",
+    "sort_order": 8
+  },
+  {
+    "definition_type": "-- INDEXES",
+    "object_name": "brand_products",
+    "definition": "CREATE UNIQUE INDEX products_pkey ON public.brand_products USING btree (id);\nCREATE UNIQUE INDEX brand_products_sku_key ON public.brand_products USING btree (sku);",
+    "sort_order": 8
+  },
+  {
+    "definition_type": "-- INDEXES",
+    "object_name": "brands",
+    "definition": "CREATE UNIQUE INDEX brands_pkey ON public.brands USING btree (id);\nCREATE UNIQUE INDEX brands_tenant_id_slug_key ON public.brands USING btree (tenant_id, slug);\nCREATE INDEX idx_brands_tenant_id ON public.brands USING btree (tenant_id);\nCREATE INDEX idx_brands_slug ON public.brands USING btree (tenant_id, slug);\nCREATE INDEX idx_brands_is_active ON public.brands USING btree (tenant_id, is_active);",
+    "sort_order": 8
+  },
+  {
+    "definition_type": "-- INDEXES",
+    "object_name": "campaigns",
+    "definition": "CREATE UNIQUE INDEX campaigns_pkey ON public.campaigns USING btree (id);\nCREATE INDEX idx_campaigns_tenant_brand ON public.campaigns USING btree (tenant_id, brand_id);\nCREATE INDEX idx_campaigns_status ON public.campaigns USING btree (campaign_status);\nCREATE INDEX idx_campaigns_created_at ON public.campaigns USING btree (created_at DESC);\nCREATE INDEX idx_campaigns_dates ON public.campaigns USING btree (campaign_start_date, campaign_end_date);\nCREATE INDEX idx_campaigns_brand ON public.campaigns USING btree (brand_id);",
+    "sort_order": 8
+  },
+  {
+    "definition_type": "-- INDEXES",
+    "object_name": "unified_performance_metrics_v1",
+    "definition": "CREATE UNIQUE INDEX unified_performance_metrics_v1_pkey ON public.unified_performance_metrics_v1 USING btree (id);\nCREATE UNIQUE INDEX unified_performance_metrics_v1_unique_daily ON public.unified_performance_metrics_v1 USING btree (tenant_id, brand_id, campaign_id, metric_date, platform);",
+    "sort_order": 8
+  },
+  {
+    "definition_type": "-- INDEXES",
+    "object_name": "unified_trends",
+    "definition": "CREATE UNIQUE INDEX unified_trends_pkey ON public.unified_trends USING btree (id);\nCREATE INDEX idx_unified_trends_velocity_race ON public.unified_trends USING btree (tenant_id, velocity_score DESC);\nCREATE INDEX idx_unified_trends_category ON public.unified_trends USING btree (category_id, trend_date DESC);",
+    "sort_order": 8
+  },
+  {
+    "definition_type": "-- VIEW DEFINITIONS",
+    "object_name": "campaign_insights_by_competitor",
+    "definition": "CREATE OR REPLACE VIEW campaign_insights_by_competitor AS \n SELECT c.campaign_type AS campaign_type_enum,\n    c.brand_id,\n    upm.product_id,\n    bc.competitor_id,\n    avg(\n        CASE\n            WHEN (fcmv.metric_type = 'engagement_rate'::metric_type_enum) THEN fcmv.value\n            ELSE NULL::numeric\n        END) AS competitor_avg_engagement,\n    avg(\n        CASE\n            WHEN (fcmv.metric_type = 'campaign_spend'::metric_type_enum) THEN fcmv.value\n            ELSE NULL::numeric\n        END) AS competitor_avg_spend,\n    avg(upm.average_engagement_rate) AS avg_engagement_rate,\n    sum(upm.marketing_spend) AS total_marketing_spend,\n    sum(upm.attributed_revenue) AS total_attributed_revenue,\n    (sum(upm.attributed_revenue) / sum(upm.marketing_spend)) AS roi\n   FROM (((campaigns c\n     JOIN unified_performance_metrics_v1 upm ON ((c.id = upm.campaign_id)))\n     JOIN brand_competitors bc ON ((c.brand_id = bc.brand_id)))\n     JOIN fact_competitor_metric_value_v1 fcmv ON ((bc.competitor_id = fcmv.competitor_id)))\n  WHERE (bc.include_for_avg = true)\n  GROUP BY c.campaign_type, c.brand_id, upm.product_id, bc.competitor_id;",
+    "sort_order": 11
+  },
+  {
+    "definition_type": "-- VIEW DEFINITIONS",
+    "object_name": "v_brand_health_scores",
+    "definition": "CREATE OR REPLACE VIEW v_brand_health_scores AS \n SELECT b.brand_id,\n    b.tenant_id,\n    b.date_id,\n    b.brand_name,\n    b.mentions,\n    b.total_reach,\n    b.total_engagements,\n    b.engagement_rate,\n    b.sentiment_score,\n    (b.sentiment_score * (100)::numeric) AS normalized_sentiment_score,\n    (b.engagement_rate * (100)::numeric) AS normalized_engagement_rate_score,\n    (b.total_reach / NULLIF(c.reach_weight, (0)::numeric)) AS normalized_reach_score,\n    ((b.mentions_velocity)::numeric / NULLIF(c.mentions_velocity_weight, (0)::numeric)) AS normalized_mentions_velocity_score,\n    (b.total_engagements / NULLIF(c.engagement_volume_weight, (0)::numeric)) AS normalized_engagement_volume_score,\n    ((((((b.sentiment_score * c.sentiment_weight) + (b.engagement_rate * c.engagement_rate_weight)) + (b.total_reach * c.reach_weight)) + ((b.mentions_velocity)::numeric * c.mentions_velocity_weight)) + (b.total_engagements * c.engagement_volume_weight)) / (100)::numeric) AS brand_health_score,\n    COALESCE(ai.impact_score, 0) AS ai_insight_impact_score,\n    (((((((b.sentiment_score * c.sentiment_weight) + (b.engagement_rate * c.engagement_rate_weight)) + (b.total_reach * c.reach_weight)) + ((b.mentions_velocity)::numeric * c.mentions_velocity_weight)) + (b.total_engagements * c.engagement_volume_weight)) / (100)::numeric) + (COALESCE(ai.impact_score, 0))::numeric) AS adjusted_brand_health_score,\n    c.lookback_days,\n    c.crisis_threshold_multiplier,\n    c.min_mentions_for_sentiment,\n    c.is_active AS config_is_active,\n    c.updated_at AS config_updated_at,\n    ai.insight_title,\n    ai.insight_description\n   FROM ((v_brand_data b\n     LEFT JOIN brand_health_config c ON (((b.brand_id = c.brand_id) AND (b.tenant_id = c.tenant_id))))\n     LEFT JOIN ai_insights_v1 ai ON (((b.brand_id = ai.brand_id) AND (b.tenant_id = ai.tenant_id) AND (b.date_id = ai.date_id))));",
+    "sort_order": 11
+  },
+  {
+    "definition_type": "-- VIEW DEFINITIONS",
+    "object_name": "v_trending_topics_view",
+    "definition": "CREATE OR REPLACE VIEW v_trending_topics_view AS \n SELECT t.id,\n    t.tenant_id,\n    t.brand_id,\n    t.trend_name,\n    t.trend_type,\n    t.category_id,\n    t.subcategory_id,\n    t.volume,\n    t.growth_percentage,\n    t.volume_change_24h,\n    t.volume_change_7d,\n    t.velocity_score,\n    t.velocity_category,\n    t.race_position,\n    t.sentiment_score,\n    t.confidence_score,\n    t.opportunity_score,\n    t.primary_platform,\n    t.primary_region,\n    t.related_hashtags,\n    t.related_keywords,\n    t.trend_date,\n    t.trend_start_date,\n    t.status,\n    t.created_at,\n    t.updated_at,\n        CASE\n            WHEN (t.growth_percentage > (30)::numeric) THEN '🔥'::text\n            WHEN (t.growth_percentage > (0)::numeric) THEN '📈'::text\n            ELSE ''::text\n        END AS trending_indicator,\n        CASE\n            WHEN (t.trend_name IS NOT NULL) THEN ('#'::text || (t.trend_name)::text)\n            ELSE NULL::text\n        END AS hashtag_display,\n    bp.id AS product_id,\n    bp.name AS product_name,\n    b.name AS brand_name\n   FROM ((unified_trends t\n     LEFT JOIN brand_products bp ON ((t.product_id = bp.id)))\n     LEFT JOIN brands b ON ((t.brand_id = b.id)))\n  WHERE ((t.status = ANY (ARRAY['opportunity'::trend_status, 'acting'::trend_status])) AND (t.volume > 0));",
+    "sort_order": 11
+  },
+  {
+    "definition_type": "-- VIEW DEFINITIONS",
+    "object_name": "view_campaign_goal_roi",
+    "definition": "CREATE OR REPLACE VIEW view_campaign_goal_roi AS \n SELECT c.brand_id,\n    upm.product_id,\n    c.campaign_goals,\n    sum(upm.attributed_revenue) AS total_revenue,\n    sum((c.campaign_budget_allocated + upm.marketing_spend)) AS total_investment,\n    ((sum(upm.attributed_revenue) - sum((c.campaign_budget_allocated + upm.marketing_spend))) / sum((c.campaign_budget_allocated + upm.marketing_spend))) AS roi\n   FROM (campaigns c\n     JOIN unified_performance_metrics_v1 upm ON ((c.id = upm.campaign_id)))\n  GROUP BY c.brand_id, upm.product_id, c.campaign_goals;",
+    "sort_order": 11
+  },
+  {
+    "definition_type": "-- VIEW DEFINITIONS",
+    "object_name": "view_campaign_type_performance",
+    "definition": "CREATE OR REPLACE VIEW view_campaign_type_performance AS \n SELECT c.brand_id,\n    upm.product_id,\n    c.campaign_type AS campaign_type_enum,\n    count(DISTINCT c.id) AS number_of_campaigns,\n    sum(upm.attributed_revenue) AS total_revenue,\n    sum((c.campaign_budget_allocated + upm.marketing_spend)) AS total_investment,\n    ((sum(upm.attributed_revenue) - sum((c.campaign_budget_allocated + upm.marketing_spend))) / NULLIF(sum((c.campaign_budget_allocated + upm.marketing_spend)), (0)::numeric)) AS roi,\n    sum(upm.total_impressions) AS total_impressions,\n    sum(upm.total_reach) AS total_reach,\n    sum(upm.total_likes) AS total_likes,\n    sum(upm.total_comments) AS total_comments,\n    sum(upm.total_shares) AS total_shares,\n    sum(upm.conversions) AS total_conversions,\n    (sum((c.campaign_budget_allocated + upm.marketing_spend)) / (NULLIF(sum(upm.conversions), 0))::numeric) AS cost_per_conversion\n   FROM (campaigns c\n     JOIN unified_performance_metrics_v1 upm ON ((c.id = upm.campaign_id)))\n  WHERE (c.is_deleted = false)\n  GROUP BY c.brand_id, upm.product_id, c.campaign_type;",
+    "sort_order": 11
+  }
+]
