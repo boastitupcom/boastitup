@@ -87,40 +87,6 @@ export const CampaignSetupService = {
     }
   },
 
-  getAIRecommendations: async (brandId: string) => {
-    try {
-      if (!brandId || brandId.trim() === '') {
-        throw new Error('Brand ID is required to fetch AI recommendations');
-      }
-
-      // Query AI recommendations for campaign setup from ai_recommended_actions_v1
-      const { data, error } = await supabase
-        .from('ai_recommended_actions_v1')
-        .select(`
-          id,
-          suggested_action_text,
-          action_description,
-          action_priority,
-          action_confidence_score,
-          action_impact_score,
-          stage
-        `)
-        .eq('insight_id', brandId)
-        .eq('stage', 'new')
-        .order('action_impact_score', { ascending: false })
-        .limit(10);
-
-      if (error) {
-        console.error('Error fetching AI recommendations:', error.message);
-        throw error;
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Failed to get AI recommendations:', error);
-      return [];
-    }
-  }
 };
 
 const CampaignDraftService = {
@@ -345,23 +311,37 @@ export default function CreateCampaignPage() {
 
   // Update state when hook data changes
   useEffect(() => {
-    if (campaignGoalsData) {
-      const goalsWithIcons = campaignGoalsData.map(goal => ({
-        ...goal,
-        IconComponent: iconMap[goal.icon_name as keyof typeof iconMap] || Target,
-        selected: formData.campaign_goals === goal.type
-      }));
+    console.log('Campaign goals data from hook:', campaignGoalsData);
+    if (campaignGoalsData && campaignGoalsData.length > 0) {
+      const goalsWithIcons = campaignGoalsData.map(goal => {
+        const IconComponent = iconMap[goal.icon_name as keyof typeof iconMap] || Target;
+        console.log(`Processing goal: ${goal.label}, Icon: ${goal.icon_name}, ROI: ${goal.roi_percentage}`, IconComponent);
+
+        return {
+          ...goal,
+          IconComponent,
+          selected: formData.campaign_goals === goal.type
+        };
+      });
+      console.log('Final goals with icons:', goalsWithIcons);
       setCampaignGoals(goalsWithIcons);
     }
   }, [campaignGoalsData, formData.campaign_goals]);
 
   useEffect(() => {
-    if (campaignTypesData) {
-      const typesWithSelection = campaignTypesData.map(type => ({
-        ...type,
-        IconComponent: iconMap[type.icon_name as keyof typeof iconMap] || Target,
-        selected: formData.campaign_type === type.type
-      }));
+    console.log('Campaign types data from hook:', campaignTypesData);
+    if (campaignTypesData && campaignTypesData.length > 0) {
+      const typesWithSelection = campaignTypesData.map(type => {
+        const IconComponent = iconMap[type.icon_name as keyof typeof iconMap] || Target;
+        console.log(`Processing type: ${type.label}, Icon: ${type.icon_name}, ROI: ${type.roi_percentage}`, IconComponent);
+
+        return {
+          ...type,
+          IconComponent,
+          selected: formData.campaign_type === type.type
+        };
+      });
+      console.log('Final types with icons:', typesWithSelection);
       setCampaignTypes(typesWithSelection);
     }
   }, [campaignTypesData, formData.campaign_type]);
@@ -796,22 +776,25 @@ export default function CreateCampaignPage() {
                     {goalsLoading ? (
                       <div className="grid grid-cols-5 gap-3">
                         {[...Array(5)].map((_, i) => (
-                          <div key={i} className="border-2 border-gray-200 rounded-lg p-4 animate-pulse">
-                            <div className="w-12 h-12 mb-3 rounded-full bg-gray-200 mx-auto"></div>
+                          <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
+                            <div className="w-8 h-8 mb-3 rounded-full bg-gray-200 mx-auto"></div>
                             <div className="h-4 bg-gray-200 rounded mb-1"></div>
-                            <div className="h-3 bg-gray-200 rounded"></div>
+                            <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                            <div className="h-6 bg-gray-200 rounded"></div>
                           </div>
                         ))}
                       </div>
                     ) : campaignGoals.length > 0 ? (
                       <div className="grid grid-cols-5 gap-3">
                         {campaignGoals.map((goal) => {
-                          const IconComponent = goal.IconComponent;
+                          const IconComponent = goal.IconComponent || Target;
+                          const hasROI = goal.roi_percentage !== undefined && goal.roi_percentage !== 0;
+
                           return (
                             <div
                               key={goal.type}
-                              className={`relative rounded-lg border-2 p-4 cursor-pointer transition-all text-center ${
-                                goal.selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
+                              className={`relative rounded-lg border p-4 cursor-pointer transition-all text-center bg-white hover:shadow-md ${
+                                goal.selected ? 'border-blue-500 shadow-md' : 'border-gray-200'
                               }`}
                               onClick={() => handleGoalSelection(goal.type)}
                             >
@@ -821,11 +804,26 @@ export default function CreateCampaignPage() {
                                 </Badge>
                               )}
                               <div className="flex flex-col items-center">
-                                <div className="w-12 h-12 mb-3 rounded-full bg-gray-50 flex items-center justify-center">
+                                <div className="w-8 h-8 mb-3 flex items-center justify-center">
                                   <IconComponent className="w-6 h-6 text-gray-600" />
                                 </div>
                                 <h4 className="font-semibold text-gray-900 text-sm mb-1">{goal.label}</h4>
-                                <p className="text-xs text-gray-500 leading-tight">{goal.description}</p>
+                                <p className="text-xs text-gray-500 leading-tight mb-3">{goal.description}</p>
+
+                                {/* ROI Display - Styled like the image */}
+                                <div className={`text-sm font-semibold px-3 py-1 rounded ${
+                                  hasROI && goal.roi_percentage > 0
+                                    ? 'bg-green-100 text-green-700'
+                                    : hasROI && goal.roi_percentage < 0
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-gray-100 text-gray-500'
+                                }`}>
+                                  {hasROI ? (
+                                    <>ROI: {goal.roi_percentage > 0 ? '+' : ''}{goal.roi_percentage}%</>
+                                  ) : (
+                                    'No data'
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );
@@ -852,13 +850,13 @@ export default function CreateCampaignPage() {
                     {typesLoading ? (
                       <div className="grid grid-cols-3 gap-4">
                         {[...Array(3)].map((_, i) => (
-                          <div key={i} className="border-2 border-gray-200 rounded-lg p-4 animate-pulse">
+                          <div key={i} className="border border-gray-200 rounded-lg p-6 animate-pulse">
                             <div className="flex items-start space-x-3">
-                              <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0 mt-1"></div>
+                              <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
                               <div className="flex-1">
                                 <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                                <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                                <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                                <div className="h-3 bg-gray-200 rounded"></div>
                               </div>
                             </div>
                           </div>
@@ -866,35 +864,49 @@ export default function CreateCampaignPage() {
                       </div>
                     ) : campaignTypes.length > 0 ? (
                       <div className="grid grid-cols-3 gap-4">
-                        {campaignTypes.map((type) => (
-                          <div
-                            key={type.type}
-                            className={`relative rounded-lg border-2 p-4 cursor-pointer transition-all ${
-                              type.selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
-                            }`}
-                            onClick={() => handleTypeSelection(type.type)}
-                          >
-                            {type.ai_recommended && (
-                              <Badge className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-md">
-                                AI Pick
-                              </Badge>
-                            )}
-                            <div className="flex items-start space-x-3">
-                              <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0 mt-1">
-                                {type.IconComponent && <type.IconComponent className="w-5 h-5 text-gray-600" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-gray-900 text-sm mb-1">{type.label}</h4>
-                                {type.roi_percentage > 0 && (
-                                  <div className="text-green-600 font-semibold text-sm mb-2">
-                                    ROI: +{type.roi_percentage}%
-                                  </div>
-                                )}
-                                <p className="text-xs text-gray-500 leading-tight">{type.description}</p>
+                        {campaignTypes.map((type) => {
+                          const IconComponent = type.IconComponent || Target;
+                          const hasROI = type.roi_percentage !== undefined && type.roi_percentage !== 0;
+
+                          return (
+                            <div
+                              key={type.type}
+                              className={`relative rounded-lg border p-6 cursor-pointer transition-all bg-white hover:shadow-md ${
+                                type.selected ? 'border-blue-500 shadow-md' : 'border-gray-200'
+                              }`}
+                              onClick={() => handleTypeSelection(type.type)}
+                            >
+                              {type.ai_recommended && (
+                                <Badge className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-md">
+                                  AI Pick
+                                </Badge>
+                              )}
+                              <div className="flex flex-col items-center text-center">
+                                <div className="w-8 h-8 mb-3 flex items-center justify-center">
+                                  <IconComponent className="w-6 h-6 text-gray-600" />
+                                </div>
+                                <h4 className="font-semibold text-gray-900 text-base mb-1">{type.label}</h4>
+
+                                {/* ROI Display - Styled like the image */}
+                                <div className={`text-sm font-semibold mb-3 px-3 py-1 rounded ${
+                                  hasROI && type.roi_percentage > 0
+                                    ? 'bg-green-100 text-green-700'
+                                    : hasROI && type.roi_percentage < 0
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-gray-100 text-gray-500'
+                                }`}>
+                                  {hasROI ? (
+                                    <>ROI: {type.roi_percentage > 0 ? '+' : ''}{type.roi_percentage}%</>
+                                  ) : (
+                                    'No data'
+                                  )}
+                                </div>
+
+                                <p className="text-sm text-gray-600 leading-tight">{type.description}</p>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : !typesLoading ? (
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">

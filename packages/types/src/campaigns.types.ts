@@ -104,6 +104,9 @@ export interface CampaignGoalOption {
   IconComponent?: any;
   ai_recommended?: boolean;
   selected: boolean;
+  // Additional metrics from view_campaign_goal_roi
+  total_revenue?: number;
+  total_investment?: number;
 }
 
 export interface CampaignTypeOption {
@@ -117,6 +120,17 @@ export interface CampaignTypeOption {
   IconComponent?: any;
   ai_recommended: boolean;
   selected: boolean;
+  // Additional comprehensive metrics
+  total_revenue?: number;
+  total_investment?: number;
+  total_impressions?: number;
+  total_reach?: number;
+  total_likes?: number;
+  total_comments?: number;
+  total_shares?: number;
+  total_conversions?: number;
+  cost_per_conversion?: number;
+  engagement_rate?: number;
 }
 
 // Form data interface

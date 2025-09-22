@@ -58,95 +58,111 @@ export const CompetitorIntelligenceService = {
    */
   fetchCompetitorIntelligence: async (brandId: string): Promise<ApiResponse<CompetitorIntelligence[]>> => {
     try {
-      // Use the actual view from def.txt: campaign_insights_by_competitor
+      if (!brandId) {
+        console.log('No brand ID provided, returning empty data');
+        return { data: [] };
+      }
+
+      // Use the v_competitor_intelligence_dashboard view that exists and has richer data
       const { data, error } = await supabase
-        .from('campaign_insights_by_competitor')
+        .from('v_competitor_intelligence_dashboard')
         .select(`
           brand_id,
           competitor_id,
-          competitor_avg_engagement,
-          competitor_avg_spend,
+          competitor_name,
+          competitor_type,
+          tenant_id,
+          estimated_campaign_budget,
+          content_top_format,
+          content_themes,
+          content_post_frequency,
+          top_hashtags,
+          timing_best_day,
+          timing_best_time,
           avg_engagement_rate,
-          total_marketing_spend,
-          total_attributed_revenue,
-          roi,
-          campaign_type_enum,
-          product_id
+          top_platform,
+          platform_engagement_breakdown,
+          engagement_trend,
+          last_metric_date,
+          data_freshness,
+          tracking_since
         `)
         .eq('brand_id', brandId)
-        .order('competitor_avg_spend', { ascending: false })
+        .order('estimated_campaign_budget', { ascending: false })
         .limit(6);
 
       if (error) {
         console.error('Error fetching competitor intelligence:', error);
-        // Return empty data instead of error to prevent UI crashes
         return { data: [] };
       }
 
       // If no data, return empty array
       if (!data || data.length === 0) {
+        console.log('No competitor data found for brand:', brandId);
         return { data: [] };
       }
 
       // Get actual campaign counts for competitors
-      const competitorIds = (data || []).map(item => item.competitor_id);
+      const competitorIds = data.map(item => item.competitor_id).filter(Boolean);
       let campaignCounts: Record<string, number> = {};
 
       if (competitorIds.length > 0) {
-        const { data: campaignData, error: campaignError } = await supabase
-          .from('campaigns')
-          .select('brand_id')
-          .in('brand_id', competitorIds)
-          .in('campaign_status', ['active', 'running', 'scheduled']);
+        try {
+          const { data: campaignData } = await supabase
+            .from('campaigns')
+            .select('brand_id')
+            .in('brand_id', competitorIds)
+            .in('campaign_status', ['active', 'running', 'scheduled']);
 
-        if (campaignError) {
-          throw campaignError;
+          campaignCounts = (campaignData || []).reduce((acc, campaign) => {
+            acc[campaign.brand_id] = (acc[campaign.brand_id] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+        } catch (campaignError) {
+          console.warn('Failed to fetch campaign counts:', campaignError);
         }
-
-        campaignCounts = (campaignData || []).reduce((acc, campaign) => {
-          acc[campaign.brand_id] = (acc[campaign.brand_id] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
       }
 
       // Transform the view data to match the expected interface
-      const transformedData: CompetitorIntelligence[] = (data || []).map((item, index) => ({
+      const transformedData: CompetitorIntelligence[] = data.map((item, index) => ({
         id: item.competitor_id || `competitor-${index}`,
-        competitor_name: `Competitor ${index + 1}`, // Generate name since not in view
-        tenant_id: '', // Not in view
+        competitor_name: item.competitor_name || `Competitor ${index + 1}`,
+        tenant_id: item.tenant_id || '',
         brand_id: item.brand_id,
-        competitor_type: 'direct', // Default type
+        competitor_type: item.competitor_type || 'direct',
         active_campaigns: campaignCounts[item.competitor_id] || 0,
-        avg_spend_raw: item.competitor_avg_spend || 0,
-        avg_spend_display: item.competitor_avg_spend
-          ? `$${(item.competitor_avg_spend / 1000).toFixed(1)}K`
+        avg_spend_raw: item.estimated_campaign_budget || 0,
+        avg_spend_display: item.estimated_campaign_budget
+          ? `$${(item.estimated_campaign_budget / 1000).toFixed(1)}K`
           : '$0',
-        top_content: 'Mixed content', // Not available in view
-        last_benchmark_update: new Date().toISOString(),
+        top_content: item.content_top_format || 'Mixed content',
+        last_benchmark_update: item.last_metric_date || new Date().toISOString(),
         is_active: true,
-        competitor_relationship_created_at: new Date().toISOString(),
-        competitor_relationship_updated_at: new Date().toISOString(),
+        competitor_relationship_created_at: item.tracking_since || new Date().toISOString(),
+        competitor_relationship_updated_at: item.tracking_since || new Date().toISOString(),
         avg_engagement_rate: item.avg_engagement_rate || 0,
-        // Generate insights based on available data
-        budget_insight: item.competitor_avg_spend && item.competitor_avg_spend > 10000
-          ? 'High budget competitor'
-          : 'Moderate budget range',
-        content_insight: item.campaign_type_enum
-          ? `Focuses on ${item.campaign_type_enum} campaigns`
+        // Generate insights based on actual view data
+        budget_insight: item.estimated_campaign_budget && item.estimated_campaign_budget > 10000
+          ? 'High budget competitor - investing heavily in campaigns'
+          : item.estimated_campaign_budget > 0
+          ? 'Moderate budget range - consistent campaign spending'
+          : 'Budget data not available',
+        content_insight: item.content_top_format
+          ? `Top performing format: ${item.content_top_format}`
           : 'Mixed content strategy',
-        hashtags_insight: `#competitor${index + 1}`,
-        timing_insight: 'Variable timing'
+        hashtags_insight: item.top_hashtags && Array.isArray(item.top_hashtags) && item.top_hashtags.length > 0
+          ? item.top_hashtags.slice(0, 3).join(', ')
+          : `#competitor${index + 1}`,
+        timing_insight: item.timing_best_day && item.timing_best_time
+          ? `Best time: ${item.timing_best_day} at ${item.timing_best_time}`
+          : 'Variable timing'
       }));
 
+      console.log(`Successfully fetched ${transformedData.length} competitors for brand ${brandId}`);
       return { data: transformedData };
     } catch (error) {
       console.error('Failed to fetch competitor intelligence:', error);
-      return { 
-        error: { 
-          message: 'Failed to fetch competitor intelligence', 
-          code: 'NETWORK_ERROR' 
-        } 
-      };
+      return { data: [] }; // Always return empty data rather than error to prevent UI crashes
     }
   },
 
@@ -154,11 +170,59 @@ export const CompetitorIntelligenceService = {
    * Generate intelligence insights based on trends and competitor data
    */
   generateIntelligenceInsights: async (
-    brandId: string, 
+    brandId: string,
     campaignType?: string
   ): Promise<ApiResponse<IntelligenceInsight[]>> => {
     try {
-      // Generate client-side insights as per camp specifications
+      // First, try to get AI recommendations from the database
+      let dbInsights: IntelligenceInsight[] = [];
+
+      try {
+        // Query ai_recommended_actions_v1 through ai_insights_v1 to get brand-specific recommendations
+        const { data: aiRecommendations, error: aiError } = await supabase
+          .from('ai_recommended_actions_v1')
+          .select(`
+            id,
+            suggested_action_text,
+            action_description,
+            action_priority,
+            action_confidence_score,
+            action_impact_score,
+            stage,
+            insight_id,
+            ai_insights_v1!inner(
+              brand_id
+            )
+          `)
+          .eq('ai_insights_v1.brand_id', brandId)
+          .eq('stage', 'new')
+          .order('action_impact_score', { ascending: false })
+          .limit(3);
+
+        if (!aiError && aiRecommendations && aiRecommendations.length > 0) {
+          dbInsights = aiRecommendations.map(item => ({
+            id: item.id,
+            type: 'ai_recommendation',
+            title: item.suggested_action_text || 'AI Recommendation',
+            description: item.action_description || '',
+            confidence: (item.action_confidence_score || 0) / 100, // Convert to 0-1 scale if needed
+            impact: item.action_impact_score > 70 ? 'high' : item.action_impact_score > 40 ? 'medium' : 'low',
+            actionable: true,
+            suggested_actions: [
+              item.suggested_action_text || 'Follow AI recommendation'
+            ]
+          }));
+        }
+      } catch (dbError) {
+        console.warn('Failed to fetch AI recommendations from database, falling back to generated insights:', dbError);
+      }
+
+      // If we have DB insights, return them
+      if (dbInsights.length > 0) {
+        return { data: dbInsights };
+      }
+
+      // Fallback: Generate client-side insights based on trends and competitor data
       const [trendsResponse, competitorsResponse] = await Promise.all([
         CompetitorIntelligenceService.fetchTrendingTopics(brandId),
         CompetitorIntelligenceService.fetchCompetitorIntelligence(brandId)
@@ -209,11 +273,11 @@ export const CompetitorIntelligenceService = {
       return { data: insights };
     } catch (error) {
       console.error('Failed to generate intelligence insights:', error);
-      return { 
-        error: { 
-          message: 'Failed to generate insights', 
-          code: 'GENERATION_ERROR' 
-        } 
+      return {
+        error: {
+          message: 'Failed to generate insights',
+          code: 'GENERATION_ERROR'
+        }
       };
     }
   },

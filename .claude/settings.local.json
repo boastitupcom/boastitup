@@ -2,8 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(rm:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "WebFetch(domain:docs.supabase.com)",
+      "WebSearch",
+      "WebFetch(domain:supabase.com)",
+      "Bash(set SUPABASE_ACCESS_TOKEN=sbp_b75ca290d94ff682bf32f58aff723523)",
+      "Bash(npx:*)"
     ],
     "deny": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }

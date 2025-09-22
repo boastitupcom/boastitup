@@ -560,3 +560,200 @@ Enhanced type checking with turbo check-types to verify campaign type enhancemen
 Integration testing with turbo test --filter=web for campaign flow validation
 
 This design seamlessly integrates with the existing Turborepo monorepo architecture, maximizes reuse of existing components and services, and provides a solid foundation for enhanced campaign creation with product association and intelligent insights.
+
+CR 2B
+
+
+
+By GenAIWorkggn
+
+3 min
+
+See views
+
+Add a reaction
+select a product for campain brand_products
+
+
+
+create table public.brand_products (
+  id uuid not null default gen_random_uuid (),
+  brand_id uuid not null,
+  name character varying not null,
+  description text null,
+  sku character varying null,
+  is_active boolean null default true,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  constraint products_pkey primary key (id),
+  constraint brand_products_sku_key unique (sku),
+  constraint products_brand_id_fkey foreign KEY (brand_id) references brands (id)
+) TABLESPACE pg_default;
+image-20250916-171139.png
+ 
+
+on selection of campain type showing insight of left botton blank as of now aboit competion avr, top performing content type, and may be short name of latest 5 campain name ( AI Generated)
+
+ 
+
+
+
+select * from ai_recommended_actions_v1 WHERE
+    id = 'd8bd16a2-f364-42eb-a394-21a066416cda';
+Campaign Type
+
+O
+
+_campaigns
+
+ 
+
+image-20250916-172005.png
+ 
+
+Screen Element
+
+Database View/Column Mapping
+
+ 
+
+Brand Health Score
+
+v_brand_health_scores.brand_health_score
+
+ 
+
+Brand Awareness
+
+v_brand_health_scores.total_reach
+
+ 
+
+Engagement Rate
+
+v_brand_health_scores.engagement_rate
+
+ 
+
+Sentiment Score
+
+v_brand_health_scores.sentiment_score
+
+ 
+
+Share of Voice
+
+No direct mapping in the provided view. This is likely a separate calculation from other data sources.
+
+ 
+
+By Default AI Pick Insights ( like Paid or organic)
+
+ 
+
+Area
+
+campaigns Column
+
+ai_recommended_actions_v1 Column
+
+Description
+
+ 
+
+Campaign Foundation / Campaign Setup
+
+campaign_name
+
+suggested_action_text
+
+The AI's suggested title for the campaign.
+
+Campaign Name
+
+Campaign Foundation / Campaign Setup
+
+campaign_description
+
+action_description
+
+The AI's detailed description of the recommended action.
+
+ 
+
+Campaign Foundation / Campaign Setup
+
+campaign_status
+
+draft
+
+The campaign should start in a draft state for user review.
+
+hidden / Save on Every Next
+
+Campaign Foundation / Campaign Setup
+
+campaign_type_id
+
+suggested_campaign_type
+
+The ID of the dim_campaign_type that corresponds to the suggested_campaign_type enum value (e.g., 'organic').
+
+Campaign Type
+
+Campaign Foundation / Campaign Setup
+
+campaign_goals
+
+suggested_engagement_objective
+
+The AI's suggested engagement objective (e.g., 'Engagement') can be stored here.
+
+Engagement Objective
+
+ 
+
+created_by
+
+auth.users.id
+
+The user ID of the person creating the campaign.
+
+ 
+
+
+
+create view public.campaign_insights_by_competitor as
+select
+  c.campaign_type_id,
+  c.brand_id,
+  upm.product_id,
+  bc.competitor_id,
+  avg(
+    case
+      when fcmv.metric_type = 'engagement_rate'::metric_type_enum then fcmv.value
+      else null::numeric
+    end
+  ) as competitor_avg_engagement,
+  avg(
+    case
+      when fcmv.metric_type = 'campaign_spend'::metric_type_enum then fcmv.value
+      else null::numeric
+    end
+  ) as competitor_avg_spend,
+  avg(upm.average_engagement_rate) as avg_engagement_rate,
+  sum(upm.marketing_spend) as total_marketing_spend,
+  sum(upm.attributed_revenue) as total_attributed_revenue,
+  sum(upm.attributed_revenue) / sum(upm.marketing_spend) as roi
+from
+  campaigns c
+  join unified_performance_metrics_v1 upm on c.id = upm.campaign_id
+  join brand_competitors bc on c.brand_id = bc.brand_id
+  join fact_competitor_metric_value_v1 fcmv on bc.competitor_id = fcmv.competitor_id
+where
+  bc.include_for_avg = true
+group by
+  c.campaign_type_id,
+  c.brand_id,
+  upm.product_id,
+  bc.competitor_id;

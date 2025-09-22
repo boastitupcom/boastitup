@@ -42,10 +42,19 @@ const getCampaignGoals = async (brandId: string): Promise<CampaignGoalOption[]> 
     throw new Error('Brand ID is required to fetch campaign goals');
   }
 
-  // Get campaign goals using live data from view_campaign_goal_roi
+  console.log('Fetching campaign goals for brand:', brandId);
+
+  // Get campaign goals using live data from view_campaign_goal_roi with exact column names from def.txt
   const { data, error } = await supabase
     .from('view_campaign_goal_roi')
-    .select('campaign_goals, roi, total_revenue, total_investment')
+    .select(`
+      brand_id,
+      product_id,
+      campaign_goals,
+      total_revenue,
+      total_investment,
+      roi
+    `)
     .eq('brand_id', brandId)
     .not('campaign_goals', 'is', null)
     .order('roi', { ascending: false });
@@ -54,6 +63,8 @@ const getCampaignGoals = async (brandId: string): Promise<CampaignGoalOption[]> 
     console.error('Error fetching campaign goals:', error.message);
     throw error;
   }
+
+  console.log('Raw campaign goals data from database:', data);
 
   // Handle null/empty data - provide default goals if no performance data exists
   if (!data || data.length === 0) {
@@ -71,43 +82,86 @@ const getCampaignGoals = async (brandId: string): Promise<CampaignGoalOption[]> 
       selected: false
     }));
 
+    console.log('Returning default goals:', defaultGoals);
     return defaultGoals;
   }
 
-  // Group by campaign_goals and calculate average ROI
-  const goalPerformance = data.reduce((acc, item) => {
-    const goal = item.campaign_goals;
-    if (!goal) return acc; // Skip null campaign_goals
+  // Always show all 5 campaign goals - merge live data with defaults
+  // Map goal keys to handle potential mismatches between enum values and data
+  const goalMapping = {
+    'Conversion': 'conversions',
+    'Awareness': 'awareness',
+    'Engagement': 'engagement',
+    'Leads': 'leads',
+    'Retention': 'retention'
+  };
 
-    if (!acc[goal]) {
-      acc[goal] = { roiSum: 0, count: 0 };
+  // Group live data by normalized goal names
+  const liveDataByGoal = data.reduce((acc, item) => {
+    const rawGoal = item.campaign_goals;
+    if (!rawGoal) return acc;
+
+    // Normalize goal name using mapping
+    const normalizedGoal = goalMapping[rawGoal as keyof typeof goalMapping] || rawGoal.toLowerCase();
+
+    if (!acc[normalizedGoal]) {
+      acc[normalizedGoal] = {
+        roiSum: 0,
+        count: 0,
+        totalRevenue: 0,
+        totalInvestment: 0
+      };
     }
-    // Handle null ROI values
-    const roiValue = item.roi !== null && item.roi !== undefined ? Number(item.roi) : 0;
-    acc[goal].roiSum += roiValue;
-    acc[goal].count += 1;
+
+    const roiValue = item.roi !== null && item.roi !== undefined && !isNaN(Number(item.roi)) ? Number(item.roi) : 0;
+    const revenue = item.total_revenue !== null && item.total_revenue !== undefined ? Number(item.total_revenue) : 0;
+    const investment = item.total_investment !== null && item.total_investment !== undefined ? Number(item.total_investment) : 0;
+
+    acc[normalizedGoal].roiSum += roiValue;
+    acc[normalizedGoal].count += 1;
+    acc[normalizedGoal].totalRevenue += revenue;
+    acc[normalizedGoal].totalInvestment += investment;
+
     return acc;
-  }, {} as Record<string, { roiSum: number; count: number }>);
+  }, {} as Record<string, { roiSum: number; count: number; totalRevenue: number; totalInvestment: number }>);
 
-  // Convert to format expected by UI
-  const formattedData = Object.entries(goalPerformance).map(([goal, stats]) => {
-    const avgRoi = stats.count > 0 ? Math.round((stats.roiSum / stats.count) * 100) : 0;
-    const goalKey = goal as keyof typeof GOAL_METADATA;
-    const metadata = GOAL_METADATA[goalKey];
+  // Create all 5 goals with live data where available
+  const allGoals = Object.entries(GOAL_METADATA).map(([goalKey, metadata]) => {
+    const liveData = liveDataByGoal[goalKey];
 
-    return {
-      id: goal,
-      type: goal as any, // Cast to CampaignGoals
-      label: metadata?.label || goal.charAt(0).toUpperCase() + goal.slice(1),
-      description: metadata?.description || `${goal} campaign objective`,
-      roi_percentage: avgRoi,
-      icon_name: GOAL_ICONS[goalKey] || 'Target',
-      ai_recommended: false, // This will be populated by a separate AI recommendations query
-      selected: false
-    };
+    if (liveData) {
+      const avgRoi = liveData.count > 0 ? (liveData.roiSum / liveData.count) * 100 : 0;
+      return {
+        id: goalKey,
+        type: goalKey as any,
+        label: metadata.label,
+        description: metadata.description,
+        roi_percentage: Math.round(avgRoi),
+        icon_name: GOAL_ICONS[goalKey as keyof typeof GOAL_ICONS],
+        ai_recommended: avgRoi > 50,
+        selected: false,
+        total_revenue: liveData.totalRevenue,
+        total_investment: liveData.totalInvestment
+      };
+    } else {
+      // No live data for this goal
+      return {
+        id: goalKey,
+        type: goalKey as any,
+        label: metadata.label,
+        description: metadata.description,
+        roi_percentage: 0,
+        icon_name: GOAL_ICONS[goalKey as keyof typeof GOAL_ICONS],
+        ai_recommended: false,
+        selected: false,
+        total_revenue: 0,
+        total_investment: 0
+      };
+    }
   });
 
-  return formattedData;
+  console.log('All campaign goals with live data:', allGoals);
+  return allGoals;
 };
 
 export const useCampaignGoals = (brandId: string) => {
