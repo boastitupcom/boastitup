@@ -142,6 +142,8 @@ export interface CampaignFormData {
   campaign_start_date: string;
   campaign_end_date: string;
   campaign_budget_allocated: number;
+  product_id?: string;
+  campaign_platform?: CampaignPlatform;
 }
 
 // Service response interfaces
@@ -169,4 +171,57 @@ export interface CampaignTypeResponse {
 export interface BrandCurrency {
   currency_code: string;
   currency_symbol: string;
+}
+
+// Trends and filtering types
+export interface TrendingTopic {
+  id: string;
+  tenant_id: string;
+  brand_id: string;
+  trend_name: string;
+  trend_type: string;
+  category_id?: string;
+  subcategory_id?: string;
+  volume: number;
+  growth_percentage: number;
+  volume_change_24h?: number;
+  volume_change_7d?: number;
+  velocity_score: number;
+  velocity_category: string;
+  race_position?: number;
+  sentiment_score?: number;
+  confidence_score?: number;
+  opportunity_score?: number;
+  primary_platform?: CampaignPlatform;
+  primary_region?: string;
+  related_hashtags?: string[];
+  related_keywords?: string[];
+  trend_date: string;
+  trend_start_date?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  trending_indicator?: string;
+  hashtag_display?: string;
+  product_id?: string;
+  product_name?: string;
+  brand_name?: string;
+}
+
+export interface TrendFilterOptions {
+  platforms: CampaignPlatform[];
+  productId?: string;
+  category?: string;
+  trendType?: string;
+  minVolume?: number;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+}
+
+export interface EnhancedTrendingTopic extends TrendingTopic {
+  product_id: string | null;
+  product_name: string | null;
+  platform_filter: CampaignPlatform | null;
 }

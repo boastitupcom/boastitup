@@ -24,3 +24,12 @@ export * from './src/okr/performance/use-virtual-list';
 
 // Campaign hooks
 export * from './src/campaigns';
+
+// Brand products hooks
+export * from './src/brand-products';
+
+// Campaign intelligence hooks
+export * from './src/campaign-intelligence';
+
+// Trends hooks
+export * from './src/trends';

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Card, CardContent, Input, Label, Textarea, Badge, Slider } from "@boastitup/ui";
+import { Button, Card, CardContent, Input, Label, Textarea, Badge, Slider, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@boastitup/ui";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -34,6 +34,7 @@ import { TrendingTopicsPanel } from "../../../../components/competitor-intellige
 import { CompetitorIntelligencePanel } from "../../../../components/competitor-intelligence/CompetitorIntelligencePanel";
 import { IntelligenceToggle } from "../../../../components/competitor-intelligence/IntelligenceToggle";
 import { HashtagStrategyWorkflow } from "../../../../components/campaigns/HashtagStrategyWorkflow";
+import EnhancedTrendsHashtagStrategy from "../../../../components/campaigns/EnhancedTrendsHashtagStrategy";
 import {
   useCampaignAvailableHashtags,
   useCampaignSelectedHashtags,
@@ -41,7 +42,10 @@ import {
   useSelectHashtagForCampaign,
   useRemoveSelectedHashtag,
   useCampaignGoals,
-  useCampaignTypes
+  useCampaignTypes,
+  useBrandProducts,
+  useCampaignInsightsByCompetitor,
+  useAIRecommendedActions
 } from "@boastitup/hooks";
 import BrandScoreCard from "../../../../components/brand-health/BrandScoreCard";
 
@@ -104,7 +108,8 @@ const CampaignDraftService = {
         brand_id,
         created_by,
         campaign_name,
-        campaign_type_id,
+        campaign_type,
+        campaign_goals,
         campaign_description,
         campaign_start_date,
         campaign_end_date,
@@ -243,6 +248,8 @@ export default function CreateCampaignPage() {
     campaign_start_date: '',
     campaign_end_date: '',
     campaign_budget_allocated: 0, // Will be set based on competitor averages or user input
+    product_id: 'all',
+    campaign_platform: undefined,
   });
 
   // Campaign draft ID for hashtag workflow
@@ -266,6 +273,17 @@ export default function CreateCampaignPage() {
   // Load campaign data using hooks
   const { data: campaignGoalsData = [], isLoading: goalsLoading } = useCampaignGoals(activeBrand?.id || '');
   const { data: campaignTypesData = [], isLoading: typesLoading } = useCampaignTypes(activeBrand?.id || '');
+
+  // Load brand products
+  const { data: brandProducts = [], isLoading: productsLoading } = useBrandProducts(activeBrand?.id || '');
+
+  // Load AI recommendations and competitor insights
+  const { data: aiRecommendations = [], isLoading: aiLoading } = useAIRecommendedActions(activeBrand?.id || '', formData.campaign_type || undefined);
+  const { data: competitorInsights = [], isLoading: competitorLoading } = useCampaignInsightsByCompetitor(
+    activeBrand?.id || '',
+    formData.campaign_type || undefined,
+    formData.product_id === 'all' ? undefined : formData.product_id || undefined
+  );
 
   // UI State
   const [campaignGoals, setCampaignGoals] = useState<CampaignGoalOption[]>([]);
@@ -432,9 +450,11 @@ export default function CreateCampaignPage() {
             campaign_goals: formData.campaign_goals || null, // Use campaign_goals enum
             campaign_type: formData.campaign_type || null, // Use campaign_type enum
             campaign_description: formData.campaign_description || null,
-            campaign_start_date: formData.campaign_start_date || null,
-            campaign_end_date: formData.campaign_end_date || null,
+            campaign_start_date: formData.campaign_start_date && formData.campaign_start_date.trim() ? formData.campaign_start_date : null,
+            campaign_end_date: formData.campaign_end_date && formData.campaign_end_date.trim() ? formData.campaign_end_date : null,
             campaign_budget_allocated: formData.campaign_budget_allocated || null,
+            product_id: formData.product_id === 'all' ? null : formData.product_id || null,
+            campaign_platform: formData.campaign_platform || null,
             created_by: userData.user.id
           };
 
@@ -444,6 +464,8 @@ export default function CreateCampaignPage() {
           }
         } catch (error) {
           console.error('Failed to auto-create draft for hashtag strategy:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          toast.error(`Failed to auto-create draft: ${errorMessage}`);
         }
       }
     };
@@ -535,9 +557,11 @@ export default function CreateCampaignPage() {
         campaign_goals: formData.campaign_goals, // Use campaign_goals enum
         campaign_type: formData.campaign_type, // Use campaign_type enum
         campaign_description: formData.campaign_description,
-        campaign_start_date: formData.campaign_start_date,
-        campaign_end_date: formData.campaign_end_date,
+        campaign_start_date: formData.campaign_start_date && formData.campaign_start_date.trim() ? formData.campaign_start_date : null,
+        campaign_end_date: formData.campaign_end_date && formData.campaign_end_date.trim() ? formData.campaign_end_date : null,
         campaign_budget_allocated: formData.campaign_budget_allocated,
+        product_id: formData.product_id === 'all' ? null : formData.product_id || null,
+        campaign_platform: formData.campaign_platform || null,
         brand_id: activeBrand?.id,
         tenant_id: activeBrand.tenant_id,
         created_by: user.user.id
@@ -550,7 +574,8 @@ export default function CreateCampaignPage() {
       toast.success('Draft saved successfully!');
     } catch (error) {
       console.error('Failed to save draft:', error);
-      toast.error('Failed to save draft. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to save draft: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -578,9 +603,11 @@ export default function CreateCampaignPage() {
         campaign_goals: formData.campaign_goals, // Use campaign_goals enum
         campaign_type: formData.campaign_type, // Use campaign_type enum
         campaign_description: formData.campaign_description,
-        campaign_start_date: formData.campaign_start_date,
-        campaign_end_date: formData.campaign_end_date,
+        campaign_start_date: formData.campaign_start_date && formData.campaign_start_date.trim() ? formData.campaign_start_date : null,
+        campaign_end_date: formData.campaign_end_date && formData.campaign_end_date.trim() ? formData.campaign_end_date : null,
         campaign_budget_allocated: formData.campaign_budget_allocated,
+        product_id: formData.product_id === 'all' ? null : formData.product_id || null,
+        campaign_platform: formData.campaign_platform || null,
         brand_id: activeBrand?.id,
         tenant_id: activeBrand.tenant_id,
         created_by: user.user.id
@@ -597,7 +624,8 @@ export default function CreateCampaignPage() {
       }
     } catch (error) {
       console.error('Failed to save draft:', error);
-      toast.error('Failed to save progress. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to save progress: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -701,33 +729,55 @@ export default function CreateCampaignPage() {
                 />
 
                 {/* AI Suggested Actions */}
-                {intelligenceInsights.length > 0 && (
-                  <div className="mt-6 bg-teal-50 border border-teal-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <Badge className="bg-red-500 text-white text-xs px-2 py-1">
-                        {intelligenceInsights[0].impact.toUpperCase()} PRIORITY
-                      </Badge>
-                      <span className="text-teal-600 text-sm">
-                        {Math.round(intelligenceInsights[0].confidence * 100)}% Confidence
-                      </span>
-                    </div>
-                    <h3 className="text-gray-900 font-semibold mb-2">AI-Generated Suggestion</h3>
-                    <p className="text-gray-700 text-sm mb-4">
-                      {intelligenceInsights[0].description}
-                    </p>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">
-                        Impact: <span className={`${
-                          intelligenceInsights[0].impact === 'high' ? 'text-red-600' :
-                          intelligenceInsights[0].impact === 'medium' ? 'text-orange-600' : 'text-gray-600'
-                        }`}>
-                          {intelligenceInsights[0].impact}
-                        </span>
-                      </span>
-                      <span className="text-gray-600">
-                        Timeline: <span className="text-gray-900">{getInsightsTimeline(intelligenceInsights)}</span>
-                      </span>
-                    </div>
+                {aiRecommendations.length > 0 && (
+                  <div className="mt-6 space-y-3">
+                    {aiRecommendations.slice(0, 1).map((recommendation, index) => (
+                      <div key={recommendation.id} className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <Badge className={`text-white text-xs px-2 py-1 ${
+                            recommendation.action_priority === 'high' ? 'bg-red-500' :
+                            recommendation.action_priority === 'medium' ? 'bg-orange-500' : 'bg-blue-500'
+                          }`}>
+                            {recommendation.action_priority.toUpperCase()} PRIORITY
+                          </Badge>
+                          {recommendation.action_confidence_score && (
+                            <span className="text-teal-600 text-sm">
+                              {Math.round(recommendation.action_confidence_score * 100)}% Confidence
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-gray-900 font-semibold mb-2">AI-Generated Suggestion</h3>
+                        <p className="text-gray-700 text-sm mb-4">
+                          {recommendation.suggested_action_text}
+                        </p>
+                        {recommendation.action_description && (
+                          <p className="text-gray-600 text-xs mb-3">
+                            {recommendation.action_description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">
+                            Impact: <span className={`${
+                              recommendation.action_priority === 'high' ? 'text-red-600' :
+                              recommendation.action_priority === 'medium' ? 'text-orange-600' : 'text-gray-600'
+                            }`}>
+                              {recommendation.action_priority}
+                            </span>
+                          </span>
+                          <span className="text-gray-600">
+                            Stage: <span className="text-gray-900">{recommendation.stage}</span>
+                          </span>
+                        </div>
+                        {recommendation.suggested_budget && (
+                          <div className="mt-2 text-sm">
+                            <span className="text-gray-600">Suggested Budget: </span>
+                            <span className="font-medium text-gray-900">
+                              {recommendation.suggested_budget_currency_symbol || '$'}{recommendation.suggested_budget.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -764,6 +814,49 @@ export default function CreateCampaignPage() {
                     </div>
                     {errors.campaign_name && (
                       <p className="text-sm text-red-500 mt-1">{errors.campaign_name}</p>
+                    )}
+                  </div>
+
+                  {/* Product Selection */}
+                  <div>
+                    <Label htmlFor="product_id" className="text-gray-900 flex items-center">
+                      Select Product
+                      <span className="w-4 h-4 ml-2 text-blue-500 rounded-full border border-blue-300 flex items-center justify-center text-xs">i</span>
+                    </Label>
+                    {productsLoading ? (
+                      <div className="bg-white border border-gray-300 rounded-md p-3 animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                      </div>
+                    ) : brandProducts.length > 0 ? (
+                      <Select
+                        value={formData.product_id}
+                        onValueChange={(value) => handleFormChange('product_id', value)}
+                      >
+                        <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                          <SelectValue placeholder="Choose a product for this campaign" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Products</SelectItem>
+                          {brandProducts.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{product.name}</span>
+                                {product.description && (
+                                  <span className="text-sm text-gray-500 truncate max-w-xs">
+                                    {product.description}
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <p className="text-gray-500 text-sm">
+                          No products found. Add products to your brand to select specific campaign targets.
+                        </p>
+                      </div>
                     )}
                   </div>
 
@@ -936,18 +1029,22 @@ export default function CreateCampaignPage() {
             onNext={() => handleNextSection(1)}
             isLoading={false}
           >
-            {/* Hashtag Strategy - Integrated into Campaign Setup */}
+            {/* Enhanced Trends & Hashtag Strategy */}
             {formData.campaign_name.trim().length >= 3 ? (
               draftId ? (
-                <TrendsHashtagStrategy campaignId={draftId} />
+                <EnhancedTrendsHashtagStrategy
+                  campaignId={draftId}
+                  selectedProductId={formData.product_id}
+                  onPlatformChange={(platform) => handleFormChange('campaign_platform', platform)}
+                />
               ) : (
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
                   <h3 className="font-semibold text-gray-900 flex items-center mb-3">
                     <Target className="w-5 h-5 mr-2 text-purple-600" />
-                    Hashtag Strategy
+                    Trends & Hashtag Strategy
                   </h3>
                   <p className="text-gray-600 text-sm mb-4">
-                    Save your campaign to unlock hashtag strategy tools and start building your hashtag collection from trending topics.
+                    Save your campaign to unlock enhanced trends analysis, platform filtering, and hashtag strategy tools.
                   </p>
                   <Button
                     onClick={handleSaveDraft}
@@ -963,7 +1060,7 @@ export default function CreateCampaignPage() {
                     ) : (
                       <>
                         <Save className="w-4 h-4 mr-2" />
-                        Save & Enable Hashtag Tools
+                        Save & Enable Enhanced Tools
                       </>
                     )}
                   </Button>
@@ -973,10 +1070,10 @@ export default function CreateCampaignPage() {
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 opacity-75">
                 <h3 className="font-semibold text-gray-600 flex items-center mb-2">
                   <Target className="w-5 h-5 mr-2" />
-                  Hashtag Strategy
+                  Trends & Hashtag Strategy
                 </h3>
                 <p className="text-gray-500 text-sm">
-                  Complete your campaign foundation to unlock hashtag strategy tools
+                  Complete your campaign foundation to unlock enhanced trends analysis and hashtag strategy tools
                 </p>
               </div>
             )}
@@ -1003,10 +1100,117 @@ export default function CreateCampaignPage() {
                 }}
               />
 
-              {/* Additional content will be added here */}
-              <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-                <p className="text-gray-500">Additional competition insights content will be added here</p>
-              </div>
+              {/* Campaign Type & Product Specific Insights */}
+              {formData.campaign_type && (
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Brain className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold text-gray-900">
+                      Campaign Intelligence
+                      {formData.product_id && formData.product_id !== 'all' && brandProducts.find(p => p.id === formData.product_id) && (
+                        <span className="text-sm font-normal text-gray-500 ml-2">
+                          for {brandProducts.find(p => p.id === formData.product_id)?.name}
+                        </span>
+                      )}
+                    </h3>
+                  </div>
+
+                  {competitorLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-gray-50 border border-gray-200 rounded-lg p-4 animate-pulse">
+                          <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                          <div className="h-8 bg-gray-200 rounded mb-2"></div>
+                          <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : competitorInsights.length > 0 ? (
+                    <div className="space-y-6">
+                      {/* Performance Metrics Overview */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <h4 className="font-medium text-blue-900 mb-2">Avg Engagement Rate</h4>
+                          <p className="text-2xl font-bold text-blue-600">
+                            {competitorInsights.length > 0 &&
+                              (competitorInsights.reduce((sum, insight) => sum + (insight.avg_engagement_rate || 0), 0) / competitorInsights.length).toFixed(1)
+                            }%
+                          </p>
+                          <p className="text-sm text-blue-600 mt-1">Competitor average</p>
+                        </div>
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <h4 className="font-medium text-green-900 mb-2">Avg ROI</h4>
+                          <p className="text-2xl font-bold text-green-600">
+                            {competitorInsights.length > 0 &&
+                              (competitorInsights.reduce((sum, insight) => sum + (insight.roi || 0), 0) / competitorInsights.length).toFixed(1)
+                            }%
+                          </p>
+                          <p className="text-sm text-green-600 mt-1">Competitor average</p>
+                        </div>
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                          <h4 className="font-medium text-orange-900 mb-2">Avg Spend</h4>
+                          <p className="text-2xl font-bold text-orange-600">
+                            {brandCurrency?.currency_symbol || '$'}
+                            {competitorInsights.length > 0 &&
+                              (competitorInsights.reduce((sum, insight) => sum + (insight.competitor_avg_spend || 0), 0) / competitorInsights.length).toLocaleString()
+                            }
+                          </p>
+                          <p className="text-sm text-orange-600 mt-1">Competitor average</p>
+                        </div>
+                      </div>
+
+                      {/* Detailed Competitor Breakdown */}
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">Competitor Performance Details</h4>
+                        <div className="space-y-3">
+                          {competitorInsights.slice(0, 3).map((insight, index) => (
+                            <div key={`${insight.competitor_id}-${index}`} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                                <div>
+                                  <span className="text-gray-500">Engagement:</span>
+                                  <p className="font-medium text-gray-900">{insight.avg_engagement_rate?.toFixed(1)}%</p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">ROI:</span>
+                                  <p className={`font-medium ${insight.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {insight.roi?.toFixed(1)}%
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Spend:</span>
+                                  <p className="font-medium text-gray-900">
+                                    {brandCurrency?.currency_symbol || '$'}{insight.competitor_avg_spend?.toLocaleString()}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Revenue:</span>
+                                  <p className="font-medium text-gray-900">
+                                    {brandCurrency?.currency_symbol || '$'}{insight.total_attributed_revenue?.toLocaleString()}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Campaign Type:</span>
+                                  <p className="font-medium text-gray-900 capitalize">{insight.campaign_type_enum}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      <p className="text-gray-500 text-sm">
+                        No competitor insights available for this campaign type
+                        {formData.product_id && formData.product_id !== 'all' && brandProducts.find(p => p.id === formData.product_id) &&
+                          ` and product (${brandProducts.find(p => p.id === formData.product_id)?.name})`
+                        }.
+                        Data will appear here once competitor analysis is available.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CollapsibleSection>
 
@@ -1051,7 +1255,7 @@ export default function CreateCampaignPage() {
           <Card className="mt-8">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Campaign Summary</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Campaign:</span>
                   <p className="font-medium">{formData.campaign_name || 'Not set'}</p>
@@ -1069,6 +1273,12 @@ export default function CreateCampaignPage() {
                   </p>
                 </div>
                 <div>
+                  <span className="text-gray-600">Platform:</span>
+                  <p className="font-medium capitalize">
+                    {formData.campaign_platform || 'Not selected'}
+                  </p>
+                </div>
+                <div>
                   <span className="text-gray-600">Budget:</span>
                   <p className="font-medium">{brandCurrency?.currency_symbol || '$'}{formData.campaign_budget_allocated?.toLocaleString() || '0'}</p>
                 </div>
@@ -1081,188 +1291,3 @@ export default function CreateCampaignPage() {
   );
 }
 
-// TrendsHashtagStrategy Component - Exact UI from screenshot
-interface TrendsHashtagStrategyProps {
-  campaignId: string;
-}
-
-const TrendsHashtagStrategy: React.FC<TrendsHashtagStrategyProps> = ({ campaignId }) => {
-  const { activeBrand } = useBrandStore();
-
-  // Fetch live data from Supabase
-  const { data: trendingTopics = [], isLoading: trendingLoading } = useTrendingTopics(activeBrand?.id || '');
-  const { data: availableHashtags = [], isLoading: availableLoading } = useCampaignAvailableHashtags(campaignId);
-  const { data: selectedHashtags = [], isLoading: selectedLoading } = useCampaignSelectedHashtags(campaignId);
-
-  // Mutations
-  const addToAvailable = useAddHashtagToAvailable();
-  const selectHashtag = useSelectHashtagForCampaign();
-  const removeSelected = useRemoveSelectedHashtag();
-
-  const handleAddToAvailable = async (hashtag: string) => {
-    try {
-      await addToAvailable.mutateAsync({
-        campaignId,
-        hashtag,
-        source: 'trending'
-      });
-      toast.success(`${hashtag} added to available hashtags`);
-    } catch (error) {
-      toast.error('Failed to add hashtag');
-    }
-  };
-
-  const handleSelectHashtag = async (hashtag: string) => {
-    try {
-      await selectHashtag.mutateAsync({ campaignId, hashtag });
-      toast.success(`${hashtag} selected for campaign`);
-    } catch (error) {
-      toast.error('Failed to select hashtag');
-    }
-  };
-
-  const handleRemoveSelected = async (hashtag: string) => {
-    try {
-      await removeSelected.mutateAsync({ campaignId, hashtag });
-      toast.success(`${hashtag} removed from selection`);
-    } catch (error) {
-      toast.error('Failed to remove hashtag');
-    }
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Left Panel: Trending Topics */}
-      <div className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <TrendingUp className="w-5 h-5 text-green-600" />
-          <h3 className="font-semibold text-gray-900">Trending Topics</h3>
-          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">ℹ️</span>
-        </div>
-
-        {trendingLoading ? (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-lg p-4 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {trendingTopics.slice(0, 3).map((topic) => (
-              <div key={topic.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-medium text-gray-900">{topic.trend_name}</h4>
-                  <span className="text-green-600 text-sm font-medium bg-green-50 px-2 py-1 rounded">
-                    {topic.growth_percentage ? `+${topic.growth_percentage}%` : 'N/A'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 mb-3">
-                  <div>
-                    <span className="text-gray-500">Vol: </span>
-                    <span className="font-medium">{typeof topic.volume === 'number' ?
-                      topic.volume >= 1000000 ? `${(topic.volume / 1000000).toFixed(1)}M` :
-                      topic.volume >= 1000 ? `${(topic.volume / 1000).toFixed(0)}K` :
-                      topic.volume.toString() : 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Velocity: </span>
-                    <span className="font-medium">{topic.velocity_category}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Sentiment: </span>
-                    <span className="font-medium">
-                      {topic.sentiment_score > 0.6 ? 'Positive' :
-                       topic.sentiment_score > 0.4 ? 'Neutral' :
-                       topic.sentiment_score < 0.4 ? 'Negative' : 'Unknown'}
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => handleAddToAvailable(topic.hashtag_display || `#${topic.trend_name}`)}
-                  disabled={addToAvailable.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4"
-                >
-                  + Add
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Right Panel: Hashtag Strategy */}
-      <div className="space-y-6">
-        <div className="flex items-center space-x-2">
-          <Target className="w-5 h-5 text-purple-600" />
-          <h3 className="font-semibold text-gray-900">Hashtag Strategy</h3>
-        </div>
-
-        {/* Available Hashtags Section */}
-        <div>
-          <h4 className="font-medium text-gray-900 mb-3">Available Hashtags</h4>
-          {availableLoading ? (
-            <div className="flex flex-wrap gap-2">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-7 w-20 bg-gray-200 rounded animate-pulse"></div>
-              ))}
-            </div>
-          ) : availableHashtags.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {availableHashtags.map((hashtag) => (
-                <Badge
-                  key={hashtag.id}
-                  className="cursor-pointer bg-purple-100 text-purple-700 hover:bg-purple-200 border-0 px-3 py-1"
-                  onClick={() => handleSelectHashtag(hashtag.hashtag)}
-                >
-                  {hashtag.hashtag}
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-sm">No hashtags available yet. Add hashtags from trending topics.</p>
-          )}
-        </div>
-
-        {/* Selected Hashtags Section */}
-        <div>
-          <h4 className="font-medium text-gray-900 mb-3">Selected Hashtags ({selectedHashtags.length})</h4>
-          {selectedLoading ? (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-              <div className="animate-pulse">Loading...</div>
-            </div>
-          ) : selectedHashtags.length > 0 ? (
-            <div className="space-y-2">
-              {selectedHashtags.map((hashtag, index) => (
-                <div key={hashtag.id} className="flex items-center justify-between bg-gray-50 rounded p-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-500 text-sm">#{index + 1}</span>
-                    <Badge variant="outline" className="text-gray-700 border-gray-300">
-                      {hashtag.hashtag}
-                    </Badge>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleRemoveSelected(hashtag.hashtag)}
-                    disabled={removeSelected.isPending}
-                    className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-16 text-center">
-              <p className="text-gray-400 text-sm">Drop hashtags here</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
