@@ -35,6 +35,10 @@ import { CompetitorIntelligencePanel } from "../../../../components/competitor-i
 import { IntelligenceToggle } from "../../../../components/competitor-intelligence/IntelligenceToggle";
 import { HashtagStrategyWorkflow } from "../../../../components/campaigns/HashtagStrategyWorkflow";
 import EnhancedTrendsHashtagStrategy from "../../../../components/campaigns/EnhancedTrendsHashtagStrategy";
+import ContentMixStrategy from "../../../../components/campaigns/ContentMixStrategy";
+import AudienceSelection from "../../../../components/campaigns/AudienceSelection";
+import TimingStrategy from "../../../../components/campaigns/TimingStrategy";
+import CompetitorAudienceAnalysis from "../../../../components/campaigns/CompetitorAudienceAnalysis";
 import {
   useCampaignAvailableHashtags,
   useCampaignSelectedHashtags,
@@ -1035,6 +1039,7 @@ export default function CreateCampaignPage() {
                 <EnhancedTrendsHashtagStrategy
                   campaignId={draftId}
                   selectedProductId={formData.product_id}
+                  budget={formData.campaign_budget_allocated}
                   onPlatformChange={(platform) => handleFormChange('campaign_platform', platform)}
                 />
               ) : (
@@ -1226,10 +1231,18 @@ export default function CreateCampaignPage() {
             showNextButton={false}
             isLoading={false}
           >
-            <div className="text-center py-8">
-              <Users className="w-12 h-12 text-green-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Coming Soon</h3>
-              <p className="text-gray-600">Audience targeting and content strategy tools</p>
+            <div className="space-y-6">
+              {/* Competitor Audience Analysis */}
+              <CompetitorAudienceAnalysis campaignId={draftId || undefined} />
+
+              {/* Content Mix Strategy */}
+              <ContentMixStrategy campaignId={draftId || undefined} />
+
+              {/* Audience Selection */}
+              <AudienceSelection campaignId={draftId || undefined} />
+
+              {/* Timing Strategy */}
+              <TimingStrategy campaignId={draftId || undefined} />
             </div>
           </CollapsibleSection>
 

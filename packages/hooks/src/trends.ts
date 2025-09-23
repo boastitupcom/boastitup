@@ -158,3 +158,135 @@ export const useAudienceOverlap = (brandId: string, competitorId?: string) => {
     enabled: !!brandId,
   });
 };
+
+// Extended hashtag performance data for matrix visualization
+export interface HashtagPerformanceData {
+  id: string;
+  hashtag: string;
+  volume: number;
+  growth_percentage: number;
+  competition_level: 'low' | 'medium' | 'high';
+  performance_level: 'low' | 'medium' | 'high';
+  sentiment_score?: number;
+  engagement_rate?: number;
+}
+
+// Hook to get hashtag performance matrix data using real competition analysis
+export const useHashtagPerformanceMatrix = (brandId: string, platform?: string, productId?: string) => {
+  return useQuery({
+    queryKey: ['hashtag-performance-matrix', brandId, platform, productId],
+    queryFn: async () => {
+      // Get trending topics with related hashtags
+      let trendsQuery = supabase
+        .from('v_trending_topics_view')
+        .select('*')
+        .eq('brand_id', brandId)
+        .not('related_hashtags', 'is', null)
+        .order('opportunity_score', { ascending: false });
+
+      if (platform && platform !== 'all') {
+        trendsQuery = trendsQuery.eq('primary_platform', platform);
+      }
+
+      if (productId && productId !== 'all') {
+        trendsQuery = trendsQuery.eq('product_id', productId);
+      }
+
+      const { data: trendsData, error: trendsError } = await trendsQuery.limit(20);
+      if (trendsError) throw trendsError;
+
+      // Get competitor data for competition analysis
+      const { data: competitorData, error: competitorError } = await supabase
+        .from('brand_competitors')
+        .select('*')
+        .eq('brand_id', brandId)
+        .eq('include_for_avg', true);
+
+      if (competitorError) throw competitorError;
+
+      // Transform trending topics into hashtag performance data using real metrics
+      const hashtagData: HashtagPerformanceData[] = [];
+
+      trendsData?.forEach(topic => {
+        const hashtags = topic.related_hashtags || [];
+        hashtags.forEach((hashtag: string, index: number) => {
+          // Use real data-based competition and performance levels
+          const competition_level: 'low' | 'medium' | 'high' =
+            topic.race_position <= 10 ? 'high' :
+            topic.race_position <= 50 ? 'medium' : 'low';
+
+          const performance_level: 'low' | 'medium' | 'high' =
+            topic.opportunity_score >= 70 ? 'high' :
+            topic.opportunity_score >= 40 ? 'medium' : 'low';
+
+          // Use actual volume from the topic (already hashtag-specific in many cases)
+          const hashtagVolume = topic.volume;
+
+          hashtagData.push({
+            id: `${topic.id}-${index}`,
+            hashtag: hashtag.startsWith('#') ? hashtag : `#${hashtag}`,
+            volume: hashtagVolume,
+            growth_percentage: topic.growth_percentage,
+            competition_level,
+            performance_level,
+            sentiment_score: topic.sentiment_score,
+            engagement_rate: topic.velocity_score // Use velocity score as engagement rate proxy
+          });
+        });
+      });
+
+      return hashtagData;
+    },
+    enabled: !!brandId,
+  });
+};
+
+// Hook to get enhanced trending topics with platform and product filters
+export const useTrendsWithFilters = (brandId: string, filters: {
+  platforms: string[];
+  productId?: string;
+  category?: string;
+  trendType?: string;
+  minVolume?: number;
+}) => {
+  return useQuery({
+    queryKey: ['trends-with-filters', brandId, filters],
+    queryFn: async () => {
+      let query = supabase
+        .from('v_trending_topics_view')
+        .select('*')
+        .eq('brand_id', brandId)
+        .order('growth_percentage', { ascending: false });
+
+      // Apply platform filter
+      if (filters.platforms.length > 0 && !filters.platforms.includes('all')) {
+        query = query.in('primary_platform', filters.platforms);
+      }
+
+      // Apply product filter
+      if (filters.productId && filters.productId !== 'all') {
+        query = query.eq('product_id', filters.productId);
+      }
+
+      // Apply category filter
+      if (filters.category) {
+        query = query.eq('category_id', filters.category);
+      }
+
+      // Apply trend type filter
+      if (filters.trendType) {
+        query = query.eq('trend_type', filters.trendType);
+      }
+
+      // Apply minimum volume filter
+      if (filters.minVolume) {
+        query = query.gte('volume', filters.minVolume);
+      }
+
+      const { data, error } = await query.limit(50);
+      if (error) throw error;
+      return data as TrendingTopic[];
+    },
+    enabled: !!brandId,
+  });
+};

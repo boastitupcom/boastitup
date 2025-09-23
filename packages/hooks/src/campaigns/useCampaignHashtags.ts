@@ -248,3 +248,35 @@ export const useReorderSelectedHashtags = () => {
     }
   });
 };
+
+// Remove hashtag completely from campaign (delete from available)
+export const useRemoveHashtagFromAvailable = () => {
+  const queryClient = useQueryClient();
+  const { activeBrand } = useBrandStore();
+
+  return useMutation({
+    mutationFn: async ({
+      campaignId,
+      hashtag
+    }: {
+      campaignId: string;
+      hashtag: string;
+    }) => {
+      if (!activeBrand?.id) throw new Error('No active brand');
+
+      const { data, error } = await supabase
+        .from('campaign_hashtags')
+        .delete()
+        .eq('campaign_id', campaignId)
+        .eq('hashtag', hashtag)
+        .eq('brand_id', activeBrand.id);
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, { campaignId }) => {
+      queryClient.invalidateQueries({ queryKey: ['campaign-hashtags-available', campaignId] });
+      queryClient.invalidateQueries({ queryKey: ['campaign-hashtags-selected', campaignId] });
+    }
+  });
+};

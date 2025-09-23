@@ -4,6 +4,7 @@ export {
   useAddHashtagToAvailable,
   useSelectHashtagForCampaign,
   useRemoveSelectedHashtag,
+  useRemoveHashtagFromAvailable,
   useReorderSelectedHashtags,
   type CampaignHashtag
 } from './useCampaignHashtags';
