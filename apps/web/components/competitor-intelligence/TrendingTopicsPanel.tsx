@@ -2,11 +2,87 @@
 "use client";
 
 import React from 'react';
-import { TrendingUp, Plus } from 'lucide-react';
+import { TrendingUp, Plus, Eye, PlayCircle, CheckCircle, XCircle, Hash, Swords, Search, AlertTriangle } from 'lucide-react';
 import type { TrendingTopic } from '@boastitup/types';
 import { formatTrendVolume, useTrendingTopics } from '@boastitup/hooks/src/competitor-intelligence';
 import { useBrandStore } from '../../store/brandStore';
 import { Button } from '@boastitup/ui';
+
+// Helper function to get trend status styling and icon
+const getTrendStatusConfig = (status: string) => {
+  switch (status) {
+    case 'opportunity':
+      return {
+        icon: Eye,
+        color: 'text-blue-500',
+        bgColor: 'bg-blue-100',
+        label: 'Opportunity'
+      };
+    case 'tracking':
+      return {
+        icon: Search,
+        color: 'text-yellow-500',
+        bgColor: 'bg-yellow-100',
+        label: 'Tracking'
+      };
+    case 'acting':
+      return {
+        icon: PlayCircle,
+        color: 'text-green-500',
+        bgColor: 'bg-green-100',
+        label: 'Acting'
+      };
+    case 'completed':
+      return {
+        icon: CheckCircle,
+        color: 'text-green-600',
+        bgColor: 'bg-green-100',
+        label: 'Completed'
+      };
+    case 'declined':
+      return {
+        icon: XCircle,
+        color: 'text-red-500',
+        bgColor: 'bg-red-100',
+        label: 'Declined'
+      };
+    case 'social_hashtag':
+      return {
+        icon: Hash,
+        color: 'text-purple-500',
+        bgColor: 'bg-purple-100',
+        label: 'Social Hashtag'
+      };
+    case 'battlefield':
+      return {
+        icon: Swords,
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-100',
+        label: 'Battlefield'
+      };
+    case 'niche_exploration':
+      return {
+        icon: Search,
+        color: 'text-indigo-500',
+        bgColor: 'bg-indigo-100',
+        label: 'Niche Exploration'
+      };
+    case 'avoid_zone':
+      return {
+        icon: AlertTriangle,
+        color: 'text-red-600',
+        bgColor: 'bg-red-100',
+        label: 'Avoid Zone'
+      };
+    default:
+      return {
+        icon: TrendingUp,
+        color: 'text-gray-500',
+        bgColor: 'bg-gray-100',
+        label: 'Unknown'
+      };
+  }
+};
 
 interface TrendingTopicsPanelProps {
   campaignId: string;
@@ -78,11 +154,28 @@ const TrendingTopicItem: React.FC<{
           <span className="font-medium text-blue-600 text-sm truncate">
             {topic.hashtag_display || topic.trend_name}
           </span>
-          {topic.primary_platform && (
-            <span className="text-xs text-gray-500 capitalize">
-              {topic.primary_platform}
-            </span>
-          )}
+          <div className="flex items-center gap-2 mt-1">
+            {topic.primary_platform && (
+              <span className="text-xs text-gray-500 capitalize">
+                {topic.primary_platform}
+              </span>
+            )}
+            {topic.status && (() => {
+              const statusConfig = getTrendStatusConfig(topic.status);
+              const StatusIcon = statusConfig.icon;
+              return (
+                <div
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs ${statusConfig.bgColor}`}
+                  title={statusConfig.label}
+                >
+                  <StatusIcon className={`w-3 h-3 ${statusConfig.color}`} />
+                  <span className={`${statusConfig.color} font-medium text-xs`}>
+                    {statusConfig.label}
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">

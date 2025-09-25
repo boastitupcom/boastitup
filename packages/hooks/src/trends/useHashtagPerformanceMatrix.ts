@@ -23,7 +23,38 @@ export const useHashtagPerformanceMatrix = (brandId: string, platform?: string, 
       // Get trending topics with related hashtags
       let trendsQuery = supabase
         .from('v_trending_topics_view')
-        .select('*')
+        .select(`
+          id,
+          tenant_id,
+          brand_id,
+          trend_name,
+          trend_type,
+          volume,
+          growth_percentage,
+          velocity_category,
+          sentiment_score,
+          primary_platform,
+          related_hashtags,
+          hashtag_display,
+          product_id,
+          product_name,
+          trending_indicator,
+          status,
+          opportunity_score,
+          race_position,
+          volume_change_24h,
+          volume_change_7d,
+          velocity_score,
+          confidence_score,
+          primary_region,
+          related_keywords,
+          trend_date,
+          trend_start_date,
+          category_id,
+          subcategory_id,
+          created_at,
+          updated_at
+        `)
         .eq('brand_id', brandId)
         .not('related_hashtags', 'is', null)
         .order('opportunity_score', { ascending: false });

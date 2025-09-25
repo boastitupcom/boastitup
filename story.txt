@@ -1,0 +1,349 @@
+Tech Story: Trends & Hashtags Dashboard with Enhanced Filtering
+Architectural Context & Decisions
+Summary of Approach: This feature enhances the existing TrendSurgeDetector component by adding platform multi-select and product single-select filters to the v_trending_topics_view, following the established pattern of filter-driven data querying with React Query caching.
+
+Key Decisions & Justifications:
+
+Reuse Existing Component Architecture: The current TrendSurgeDetector.tsx component will be extended rather than replaced, maintaining consistency with existing patterns in the codebase.
+
+Leverage Existing Database View: The v_trending_topics_view already includes product_id and will be enhanced to support platform filtering, following the multi-tenant RLS pattern established in other tables.
+
+Follow Established Hook Patterns: New hooks will be created in packages/hooks/src/trends/ following the same patterns as brand-health hooks with React Query integration.
+
+Reuse UI Filter Components: Will utilize existing filter components from OKRFilters and TrendSurgeDetector patterns for consistency.
+
+Open Questions / Assumptions:
+
+Assuming the existing campaign_platform_enum can be reused for platform filtering options.
+
+Question: Should the existing TrendSurgeDetector be deprecated in favor of this enhanced version, or maintained for backward compatibility?
+
+Feature Overview
+Feature Name: Trends & Hashtags Dashboard with Platform & Product Filtering Problem Statement: Users currently cannot filter trending topics by specific platforms or products, making it difficult to identify relevant trends for targeted campaigns or specific product lines. Solution: Enhance the existing trends dashboard with multi-select platform filtering and single-select product filtering, providing more granular control over trend discovery. Business Value: Enables marketing teams to identify platform-specific and product-specific trends, improving campaign targeting accuracy and reducing trend analysis time by 60%.
+
+Technical Architecture
+Tech Stack Confirmation
+Monorepo Structure: Follows Turborepo with pnpm workspace management
+
+Core Stack: Next.js 15.3.4, React 19, TypeScript, Tailwind CSS, Supabase, Zustand
+
+Package Dependencies: Will utilize existing packages (@boastitup/ui, @boastitup/hooks, @boastitup/supabase, @boastitup/types)
+
+Database Schema
+Relationship to Existing Schema: This feature extends the existing v_trending_topics_view and leverages the campaign_platform_enum for platform filtering. No new tables required.
+
+
+
+-- Enhanced view to support platform filtering
+-- Location: packages/supabase/migrations/[timestamp]_enhance_trending_topics_view.sql
+CREATE OR REPLACE VIEW public.v_trending_topics_view AS
+SELECT
+  t.id,
+  t.tenant_id,
+  t.brand_id,
+  t.trend_name,
+  t.trend_type,
+  t.category_id,
+  t.subcategory_id,
+  t.volume,
+  t.growth_percentage,
+  t.volume_change_24h,
+  t.volume_change_7d,
+  t.velocity_score,
+  t.velocity_category,
+  t.race_position,
+  t.sentiment_score,
+  t.confidence_score,
+  t.opportunity_score,
+  t.primary_platform,
+  t.primary_region,
+  t.related_hashtags,
+  t.related_keywords,
+  t.trend_date,
+  t.trend_start_date,
+  t.status,
+  t.created_at,
+  t.updated_at,
+  CASE
+    WHEN t.growth_percentage > 30::numeric THEN '🔥'::text
+    WHEN t.growth_percentage > 0::numeric THEN '📈'::text
+    ELSE ''::text
+  END AS trending_indicator,
+  CASE
+    WHEN t.trend_name IS NOT NULL THEN '#'::text || t.trend_name::text
+    ELSE NULL::text
+  END AS hashtag_display,
+  bp.id AS product_id,
+  bp.name AS product_name,
+  b.name AS brand_name,
+  -- Enhanced platform field for filtering
+  t.primary_platform::text AS platform_filter
+FROM
+  unified_trends AS t
+LEFT JOIN
+  brand_products AS bp ON t.product_id = bp.id
+LEFT JOIN
+  brands AS b ON t.brand_id = b.id
+WHERE
+  t.status = ANY (ARRAY['opportunity'::trend_status, 'acting'::trend_status])
+  AND t.volume > 0;
+-- RLS policies will follow existing patterns from other brand-scoped views
+-- (Policies already exist on unified_trends table)
+Data Models & Types
+Package Location: packages/types/src/trends.types.ts
+
+New Models:
+
+
+
+export interface TrendFilterOptions {
+  platforms: CampaignPlatform[];
+  productId?: string;
+  category?: string;
+  trendType?: string;
+  minVolume?: number;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+}
+export interface EnhancedTrendingTopic extends TrendingTopic {
+  product_id: string | null;
+  product_name: string | null;
+  platform_filter: CampaignPlatform | null;
+}
+export type CampaignPlatform = 
+  | 'facebook'
+  | 'instagram' 
+  | 'google_ads'
+  | 'tiktok'
+  | 'twitter'
+  | 'linkedin'
+  | 'pinterest';
+Type Extensions:
+
+The existing TrendingTopic type from the codebase will be extended with platform and product information
+
+CampaignPlatform enum will be imported from existing campaign types
+
+Service Layer API
+Package Location: packages/hooks/src/trends/
+
+New Hooks:
+
+useTrendsWithFilters(): Fetches filtered trends data using @tanstack/react-query, caches under ['trends', brandId, filters]. Returns enhanced trending topics with platform and product data.
+
+useProductOptions(): Fetches available products for the filter dropdown, cached under ['brand-products', brandId].
+
+usePlatformOptions(): Returns static platform options based on campaign_platform_enum.
+
+Dependencies on Existing Services:
+
+Will import and use @boastitup/supabase/client for database operations
+
+Will integrate with existing tenant/brand context from brandStore
+
+State Management (Zustand)
+Location: apps/web/store/trendsStore.ts
+
+Approach: Extend the existing TrendSurgeDetector state management or create a new trends-specific store for filter state management.
+
+State Managed:
+
+selectedPlatforms: CampaignPlatform[]
+
+selectedProductId: string | null
+
+activeFilters: TrendFilterOptions
+
+isFilterPanelOpen: boolean
+
+Core UI Components
+Enhanced Components (apps/web/components/trends/)
+TrendSurgeDetector (apps/web/components/TrendSurgeDetector.tsx)
+
+Responsibility: Enhanced version of existing component with new filter controls
+
+New Props: 
+
+
+
+interface TrendSurgeDetectorProps {  className?: string;  enablePlatformFilter?: boolean;  enableProductFilter?: boolean;  defaultFilters?: Partial<TrendFilterOptions>;}
+TrendFilterPanel (apps/web/components/trends/TrendFilterPanel.tsx)
+
+Responsibility: New component to house the platform multi-select and product single-select filters
+
+Features: Uses existing Select patterns from OKRFilters.tsx
+
+Reusable Core Components (from @boastitup/ui)
+Select (packages/ui/src/components/ui/select.tsx): Multi-select for platforms, single-select for products Badge (packages/ui/src/components/ui/badge.tsx): Display active filter indicators Button, Card (packages/ui/src/components/ui/): Consistent with existing filter patterns
+
+Package UI Components (from shadcn/ui via @boastitup/ui)
+All UI primitives accessed through @boastitup/ui package, maintaining design system consistency.
+
+Validation Schemas
+Location: packages/hooks/src/trends/schemas.ts
+
+New Schemas:
+
+
+
+export const trendFiltersSchema = z.object({
+  platforms: z.array(z.enum(['facebook', 'instagram', 'google_ads', 'tiktok', 'twitter', 'linkedin', 'pinterest'])),
+  productId: z.string().uuid().optional(),
+  category: z.string().optional(),
+  trendType: z.string().optional(),
+  minVolume: z.number().min(0).optional(),
+});
+Business Logic
+Core Logic Flows:
+
+Filter Application: When users select platforms or products, the query parameters are updated and passed to the Supabase view query
+
+Multi-Select Platform Logic: Users can select multiple platforms, with results showing trends that match ANY of the selected platforms
+
+Single-Select Product Logic: Only one product can be selected at a time, showing trends specifically related to that product
+
+Integration with Existing Trends: The enhanced filtering works with existing trend sorting, search, and category filters
+
+File Structure
+Adherence: The proposed file structure conforms to the established Turborepo monorepo conventions:
+
+
+
+# Turborepo Structure
+apps/web/
+├── components/trends/           # Enhanced trend components
+│   ├── TrendFilterPanel.tsx     # New filter component
+│   ├── EnhancedTrendCard.tsx    # Enhanced trend display
+│   └── PlatformBadge.tsx        # Platform indicator component
+├── store/trendsStore.ts         # Zustand store for filters
+└── components/                  # Existing components
+    └── TrendSurgeDetector.tsx   # Enhanced existing component
+packages/hooks/src/trends/       # New trends package
+├── useTrendsWithFilters.ts      # Main filtered trends hook
+├── useProductOptions.ts         # Product dropdown data
+├── usePlatformOptions.ts        # Platform options hook
+└── schemas.ts                   # Validation schemas
+packages/types/src/              # Enhanced types
+├── trends.types.ts              # New trend filtering types
+└── index.ts                     # Export new types
+packages/supabase/               # Database operations
+├── migrations/                  # View enhancement migration
+│   └── [timestamp]_enhance_trending_topics_view.sql
+└── client.ts                    # Enhanced client operations
+Adherence to Project Standards
+Error Handling
+Will use existing error handling patterns from @boastitup/hooks and existing TrendSurgeDetector component
+
+Toast notifications will follow existing UI patterns from @boastitup/ui components
+
+Filter validation errors handled gracefully with user-friendly messages
+
+Performance
+Caching Strategy: React Query caches with appropriate stale times for trend data
+
+Filter Debouncing: Platform and product filter changes debounced to prevent excessive API calls
+
+Selective Re-renders: Only affected components re-render when filters change
+
+Lazy Loading: Trend details loaded on-demand when cards are expanded
+
+Security
+RLS Policies: Existing RLS policies on unified_trends table ensure proper data isolation
+
+Input Validation: All filter inputs validated using Zod schemas
+
+SQL Injection Prevention: All queries use parameterized queries through Supabase client
+
+Package Dependencies
+Internal Package Usage:
+
+@boastitup/ui for all filter UI components and existing trend display components
+
+@boastitup/hooks for new trend filtering hooks following existing patterns
+
+@boastitup/supabase/client for enhanced database operations
+
+@boastitup/types for new filtering type definitions
+
+External Dependencies: No new external dependencies required - leveraging existing React Query, Zod, and Zustand implementations.
+
+Key Integration Tests
+Location: apps/web/__tests__/trends/integration.test.ts
+
+Filter Integration Test: Test that platform and product filters correctly filter the trending topics results
+
+Multi-tenant Filter Test: Ensure filters respect tenant boundaries and don't show cross-tenant data
+
+Performance Test: Verify that rapid filter changes don't cause excessive re-renders or API calls
+
+State Management Test: Test that filter state persists correctly across component re-mounts
+
+UI Integration Test: Test that existing trend display components work correctly with new filtered data
+
+Turborepo-Specific Considerations
+Build Dependencies
+Existing Dependencies: No changes to turbo.json required as new hooks package will follow existing patterns
+
+Package Boundaries: New trends hooks properly isolated in packages/hooks/src/trends/
+
+Package Versioning
+All internal package references use workspace:* versioning
+
+Follow existing patterns for package.json exports and main fields
+
+Development Workflow
+Use turbo dev --filter=web for focused development on the enhanced component
+
+Lint across packages with turbo lint to ensure consistency
+
+Type checking with turbo check-types across all packages including new types
+
+This enhanced Trends & Hashtags feature seamlessly integrates with the existing codebase architecture, reusing established patterns while providing the new filtering capabilities requested. The design maintains consistency with existing components like OKRFilters and TrendSurgeDetector, ensuring a cohesive user experience across the application.
+
+
+extras:
+in Trends & Hashtag Strategy give a platform selection using short icons on top , also if product is selected in foundation then show hashtags linked to products
+
+Core table
+
+unified_trends
+
+ 
+
+Update view to add grp by for Primary platform
+
+v_trending_topics_view
+
+Only One platform at time
+
+image-20250916-171646.png
+image-20250916-172146.png
+for Competition Analysis ( rename is budget selection)
+
+brand_competitors
+
+competitor_type
+
+add filter by product_id - Also brand_competitors can be traked at product level 
+
+image-20250916-172524.png
+timining
+
+ 
+
+Content Mix Strategy
+
+image-20250916-172906.png
+ 
+
+Auidence Selection
+
+image-20250916-173124.png
+ 
+
+image-20250916-173108.png
+ 
+
+Target Audience - should be defined at product level and what audince competion product target share that insights

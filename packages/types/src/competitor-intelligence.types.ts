@@ -38,7 +38,7 @@ export interface TrendingTopic {
   related_keywords: string[];
   trend_date: string;
   trend_start_date: string;
-  status: 'opportunity' | 'acting';
+  status: 'opportunity' | 'tracking' | 'acting' | 'completed' | 'declined' | 'social_hashtag' | 'battlefield' | 'niche_exploration' | 'avoid_zone';
   category_id?: string;
   subcategory_id?: string;
   created_at: string;

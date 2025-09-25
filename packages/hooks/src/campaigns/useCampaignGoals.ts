@@ -71,9 +71,17 @@ const getCampaignGoals = async (brandId: string): Promise<CampaignGoalOption[]> 
     console.log('No campaign goal performance data found for brand:', brandId, '- providing default goals');
 
     // Return default goals based on enum values when no performance data exists
+    const dbEnumMapping = {
+      'conversions': 'Conversion',
+      'awareness': 'Awareness',
+      'engagement': 'Engagement',
+      'leads': 'Leads',
+      'retention': 'Retention'
+    };
+
     const defaultGoals = Object.entries(GOAL_METADATA).map(([goalKey, metadata]) => ({
       id: goalKey,
-      type: goalKey as any,
+      type: dbEnumMapping[goalKey as keyof typeof dbEnumMapping], // Use database enum value
       label: metadata.label,
       description: metadata.description,
       roi_percentage: 0, // No performance data available
@@ -94,6 +102,15 @@ const getCampaignGoals = async (brandId: string): Promise<CampaignGoalOption[]> 
     'Engagement': 'engagement',
     'Leads': 'leads',
     'Retention': 'retention'
+  };
+
+  // Map from internal keys to database enum values
+  const dbEnumMapping = {
+    'conversions': 'Conversion',
+    'awareness': 'Awareness',
+    'engagement': 'Engagement',
+    'leads': 'Leads',
+    'retention': 'Retention'
   };
 
   // Group live data by normalized goal names
@@ -133,7 +150,7 @@ const getCampaignGoals = async (brandId: string): Promise<CampaignGoalOption[]> 
       const avgRoi = liveData.count > 0 ? (liveData.roiSum / liveData.count) * 100 : 0;
       return {
         id: goalKey,
-        type: goalKey as any,
+        type: dbEnumMapping[goalKey as keyof typeof dbEnumMapping], // Use database enum value
         label: metadata.label,
         description: metadata.description,
         roi_percentage: Math.round(avgRoi),
@@ -147,7 +164,7 @@ const getCampaignGoals = async (brandId: string): Promise<CampaignGoalOption[]> 
       // No live data for this goal
       return {
         id: goalKey,
-        type: goalKey as any,
+        type: dbEnumMapping[goalKey as keyof typeof dbEnumMapping], // Use database enum value
         label: metadata.label,
         description: metadata.description,
         roi_percentage: 0,

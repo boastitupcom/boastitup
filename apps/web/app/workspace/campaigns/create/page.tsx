@@ -99,13 +99,36 @@ export const CampaignSetupService = {
 
 const CampaignDraftService = {
   saveDraft: async (draftPayload: any) => {
+    // Validate enum values against actual database enums
+    const validGoals = ['Awareness', 'Engagement', 'Conversion', 'Leads', 'Retention'];
+    const validTypes = ['organic', 'hybrid', 'paid'];
+    const validPlatforms = ['facebook', 'instagram', 'google_ads', 'tiktok', 'twitter', 'linkedin', 'pinterest'];
+
+    // Clean and validate the payload
+    const cleanPayload = {
+      ...draftPayload,
+      // Ensure campaign_goals is valid or null
+      campaign_goals: (draftPayload.campaign_goals && validGoals.includes(draftPayload.campaign_goals))
+        ? draftPayload.campaign_goals
+        : null,
+      // Ensure campaign_type is valid or null
+      campaign_type: (draftPayload.campaign_type && validTypes.includes(draftPayload.campaign_type))
+        ? draftPayload.campaign_type
+        : null,
+      // Ensure campaign_platform is valid or null
+      campaign_platform: (draftPayload.campaign_platform && validPlatforms.includes(draftPayload.campaign_platform))
+        ? draftPayload.campaign_platform
+        : null,
+      // Always set status to draft
+      campaign_status: 'draft',
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('Saving campaign draft with payload:', cleanPayload);
+
     const { data, error } = await supabase
       .from('campaigns')
-      .upsert({
-        ...draftPayload,
-        campaign_status: 'draft',
-        updated_at: new Date().toISOString()
-      })
+      .upsert(cleanPayload)
       .select(`
         id,
         tenant_id,
@@ -118,11 +141,19 @@ const CampaignDraftService = {
         campaign_start_date,
         campaign_end_date,
         campaign_budget_allocated,
+        campaign_platform,
         campaign_status,
+        product_id,
         created_at,
         updated_at
       `);
-    if (error) throw error;
+
+    if (error) {
+      console.error('Database error saving campaign draft:', error);
+      throw error;
+    }
+
+    console.log('Campaign draft saved successfully:', data);
     return data;
   }
 };
@@ -450,10 +481,10 @@ export default function CreateCampaignPage() {
           const draftData = {
             tenant_id: activeBrand.tenant_id,
             brand_id: activeBrand.id,
-            campaign_name: formData.campaign_name,
-            campaign_goals: formData.campaign_goals || null, // Use campaign_goals enum
-            campaign_type: formData.campaign_type || null, // Use campaign_type enum
-            campaign_description: formData.campaign_description || null,
+            campaign_name: formData.campaign_name.trim(),
+            campaign_goals: formData.campaign_goals || null,
+            campaign_type: formData.campaign_type || null,
+            campaign_description: formData.campaign_description?.trim() || null,
             campaign_start_date: formData.campaign_start_date && formData.campaign_start_date.trim() ? formData.campaign_start_date : null,
             campaign_end_date: formData.campaign_end_date && formData.campaign_end_date.trim() ? formData.campaign_end_date : null,
             campaign_budget_allocated: formData.campaign_budget_allocated || null,
@@ -462,19 +493,24 @@ export default function CreateCampaignPage() {
             created_by: userData.user.id
           };
 
+          console.log('Auto-creating draft with data:', draftData);
+
           const result = await CampaignDraftService.saveDraft(draftData);
-          if (result && result[0]?.id) {
+          if (result && result.length > 0 && result[0]?.id) {
             setDraftId(result[0].id);
+            console.log('Auto-created draft with ID:', result[0].id);
           }
         } catch (error) {
           console.error('Failed to auto-create draft for hashtag strategy:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-          toast.error(`Failed to auto-create draft: ${errorMessage}`);
+          // Don't show toast for auto-create failures to avoid annoying the user
+          // Only log the error for debugging
         }
       }
     };
 
-    createDraftForHashtagStrategy();
+    // Add a small debounce to avoid too many auto-save attempts
+    const timeoutId = setTimeout(createDraftForHashtagStrategy, 500);
+    return () => clearTimeout(timeoutId);
   }, [formData.campaign_name, formData.campaign_goals, formData.campaign_type, draftId, activeBrand?.id]);
 
   // Handle campaign goal selection
@@ -548,6 +584,12 @@ export default function CreateCampaignPage() {
       return;
     }
 
+    // Check if required data is available
+    if (!activeBrand?.id) {
+      toast.error('Please select a brand before saving');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const { data: user } = await supabase.auth.getUser();
@@ -556,29 +598,61 @@ export default function CreateCampaignPage() {
         return;
       }
 
+      // Ensure campaign_name is not empty for database constraints
+      if (!formData.campaign_name.trim()) {
+        toast.error('Campaign name is required');
+        return;
+      }
+
       const draftData = {
-        campaign_name: formData.campaign_name,
-        campaign_goals: formData.campaign_goals, // Use campaign_goals enum
-        campaign_type: formData.campaign_type, // Use campaign_type enum
-        campaign_description: formData.campaign_description,
+        // Include id if updating existing draft
+        ...(draftId && { id: draftId }),
+        campaign_name: formData.campaign_name.trim(),
+        campaign_goals: formData.campaign_goals || null,
+        campaign_type: formData.campaign_type || null,
+        campaign_description: formData.campaign_description?.trim() || null,
         campaign_start_date: formData.campaign_start_date && formData.campaign_start_date.trim() ? formData.campaign_start_date : null,
         campaign_end_date: formData.campaign_end_date && formData.campaign_end_date.trim() ? formData.campaign_end_date : null,
-        campaign_budget_allocated: formData.campaign_budget_allocated,
+        campaign_budget_allocated: formData.campaign_budget_allocated || null,
         product_id: formData.product_id === 'all' ? null : formData.product_id || null,
         campaign_platform: formData.campaign_platform || null,
-        brand_id: activeBrand?.id,
+        brand_id: activeBrand.id,
         tenant_id: activeBrand.tenant_id,
         created_by: user.user.id
       };
 
+      console.log('Attempting to save draft with form data:', formData);
+      console.log('Attempting to save draft with cleaned data:', draftData);
+
       const result = await CampaignDraftService.saveDraft(draftData);
-      if (result && result[0]?.id) {
+      if (result && result.length > 0 && result[0]?.id) {
         setDraftId(result[0].id);
+        toast.success('Draft saved successfully!');
+      } else {
+        console.error('No result returned from save draft:', result);
+        toast.error('Failed to save draft: No data returned');
       }
-      toast.success('Draft saved successfully!');
     } catch (error) {
       console.error('Failed to save draft:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+      // Better error handling with specific error messages
+      let errorMessage = 'Unknown error occurred';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+
+        // Handle specific PostgreSQL/Supabase errors
+        if (errorMessage.includes('null value in column') && errorMessage.includes('violates not-null constraint')) {
+          errorMessage = 'Missing required field. Please check all required information is filled.';
+        } else if (errorMessage.includes('violates foreign key constraint')) {
+          errorMessage = 'Invalid brand or user reference. Please refresh and try again.';
+        } else if (errorMessage.includes('invalid input value for enum')) {
+          errorMessage = 'Invalid campaign goal or type selected. Please try selecting again.';
+        } else if (errorMessage.includes('duplicate key value violates unique constraint')) {
+          errorMessage = 'A campaign with this name already exists. Please choose a different name.';
+        }
+      }
+
       toast.error(`Failed to save draft: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
@@ -594,6 +668,12 @@ export default function CreateCampaignPage() {
       return;
     }
 
+    // Check if required data is available
+    if (!activeBrand?.id) {
+      toast.error('Please select a brand before continuing');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const { data: user } = await supabase.auth.getUser();
@@ -603,32 +683,50 @@ export default function CreateCampaignPage() {
       }
 
       const draftData = {
-        campaign_name: formData.campaign_name,
-        campaign_goals: formData.campaign_goals, // Use campaign_goals enum
-        campaign_type: formData.campaign_type, // Use campaign_type enum
-        campaign_description: formData.campaign_description,
+        // Include id if updating existing draft
+        ...(draftId && { id: draftId }),
+        campaign_name: formData.campaign_name.trim(),
+        campaign_goals: formData.campaign_goals || null,
+        campaign_type: formData.campaign_type || null,
+        campaign_description: formData.campaign_description?.trim() || null,
         campaign_start_date: formData.campaign_start_date && formData.campaign_start_date.trim() ? formData.campaign_start_date : null,
         campaign_end_date: formData.campaign_end_date && formData.campaign_end_date.trim() ? formData.campaign_end_date : null,
-        campaign_budget_allocated: formData.campaign_budget_allocated,
+        campaign_budget_allocated: formData.campaign_budget_allocated || null,
         product_id: formData.product_id === 'all' ? null : formData.product_id || null,
         campaign_platform: formData.campaign_platform || null,
-        brand_id: activeBrand?.id,
+        brand_id: activeBrand.id,
         tenant_id: activeBrand.tenant_id,
         created_by: user.user.id
       };
 
       const result = await CampaignDraftService.saveDraft(draftData);
-      toast.success('Step 1 saved successfully!');
-      
-      // Navigate to step 2 with draft ID
-      if (result && result.length > 0) {
+      if (result && result.length > 0 && result[0]?.id) {
+        toast.success('Step 1 saved successfully!');
+        // Navigate to step 2 with draft ID
         router.push(`/workspace/campaigns/create/step-2?draft_id=${result[0].id}`);
       } else {
-        router.push('/workspace/campaigns/create/step-2');
+        console.error('No result returned from save draft:', result);
+        toast.error('Failed to save progress: No data returned');
       }
     } catch (error) {
       console.error('Failed to save draft:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+      // Better error handling with specific error messages
+      let errorMessage = 'Unknown error occurred';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+
+        // Handle specific PostgreSQL/Supabase errors
+        if (errorMessage.includes('null value in column') && errorMessage.includes('violates not-null constraint')) {
+          errorMessage = 'Missing required field. Please check all required information is filled.';
+        } else if (errorMessage.includes('violates foreign key constraint')) {
+          errorMessage = 'Invalid brand or user reference. Please refresh and try again.';
+        } else if (errorMessage.includes('invalid input value for enum')) {
+          errorMessage = 'Invalid campaign goal or type selected. Please try selecting again.';
+        }
+      }
+
       toast.error(`Failed to save progress: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
@@ -704,8 +802,8 @@ export default function CreateCampaignPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-4">
+      <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:max-w-7xl xl:mx-auto py-4 sm:py-6 lg:py-8">
+        <div className="space-y-6 lg:space-y-8">
 
           {/* Section 1: Campaign Foundation */}
           <CollapsibleSection
@@ -718,7 +816,7 @@ export default function CreateCampaignPage() {
             onNext={() => handleNextSection(0)}
             isLoading={isSubmitting}
           >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
               {/* Left: Brand Health Insights */}
               <div>
                 <div className="flex items-center space-x-2 mb-4">
@@ -871,10 +969,10 @@ export default function CreateCampaignPage() {
                       <span className="w-4 h-4 ml-2 text-blue-500 rounded-full border border-blue-300 flex items-center justify-center text-xs">i</span>
                     </Label>
                     {goalsLoading ? (
-                      <div className="grid grid-cols-5 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                         {[...Array(5)].map((_, i) => (
-                          <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
-                            <div className="w-8 h-8 mb-3 rounded-full bg-gray-200 mx-auto"></div>
+                          <div key={i} className="border border-gray-200 rounded-lg p-3 sm:p-4 animate-pulse">
+                            <div className="w-4 h-4 sm:w-5 sm:h-5 mb-3 rounded-full bg-gray-200 mx-auto"></div>
                             <div className="h-4 bg-gray-200 rounded mb-1"></div>
                             <div className="h-3 bg-gray-200 rounded mb-2"></div>
                             <div className="h-6 bg-gray-200 rounded"></div>
@@ -882,7 +980,7 @@ export default function CreateCampaignPage() {
                         ))}
                       </div>
                     ) : campaignGoals.length > 0 ? (
-                      <div className="grid grid-cols-5 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                         {campaignGoals.map((goal) => {
                           const IconComponent = goal.IconComponent || Target;
                           const hasROI = goal.roi_percentage !== undefined && goal.roi_percentage !== 0;
@@ -890,7 +988,7 @@ export default function CreateCampaignPage() {
                           return (
                             <div
                               key={goal.type}
-                              className={`relative rounded-lg border p-4 cursor-pointer transition-all text-center bg-white hover:shadow-md ${
+                              className={`relative rounded-lg border p-3 sm:p-4 cursor-pointer transition-all text-center bg-white hover:shadow-md ${
                                 goal.selected ? 'border-blue-500 shadow-md' : 'border-gray-200'
                               }`}
                               onClick={() => handleGoalSelection(goal.type)}
@@ -902,9 +1000,9 @@ export default function CreateCampaignPage() {
                               )}
                               <div className="flex flex-col items-center">
                                 <div className="w-8 h-8 mb-3 flex items-center justify-center">
-                                  <IconComponent className="w-6 h-6 text-gray-600" />
+                                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                                 </div>
-                                <h4 className="font-semibold text-gray-900 text-sm mb-1">{goal.label}</h4>
+                                <h4 className="font-semibold text-gray-900 text-xs sm:text-sm mb-1">{goal.label}</h4>
                                 <p className="text-xs text-gray-500 leading-tight mb-3">{goal.description}</p>
 
                                 {/* ROI Display - Styled like the image */}
@@ -945,11 +1043,11 @@ export default function CreateCampaignPage() {
                       <span className="w-4 h-4 ml-2 text-blue-500 rounded-full border border-blue-300 flex items-center justify-center text-xs">i</span>
                     </Label>
                     {typesLoading ? (
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         {[...Array(3)].map((_, i) => (
-                          <div key={i} className="border border-gray-200 rounded-lg p-6 animate-pulse">
+                          <div key={i} className="border border-gray-200 rounded-lg p-4 sm:p-6 animate-pulse">
                             <div className="flex items-start space-x-3">
-                              <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-gray-200 flex-shrink-0"></div>
                               <div className="flex-1">
                                 <div className="h-4 bg-gray-200 rounded mb-2"></div>
                                 <div className="h-6 bg-gray-200 rounded mb-2"></div>
@@ -960,7 +1058,7 @@ export default function CreateCampaignPage() {
                         ))}
                       </div>
                     ) : campaignTypes.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         {campaignTypes.map((type) => {
                           const IconComponent = type.IconComponent || Target;
                           const hasROI = type.roi_percentage !== undefined && type.roi_percentage !== 0;
@@ -968,7 +1066,7 @@ export default function CreateCampaignPage() {
                           return (
                             <div
                               key={type.type}
-                              className={`relative rounded-lg border p-6 cursor-pointer transition-all bg-white hover:shadow-md ${
+                              className={`relative rounded-lg border p-4 sm:p-6 cursor-pointer transition-all bg-white hover:shadow-md ${
                                 type.selected ? 'border-blue-500 shadow-md' : 'border-gray-200'
                               }`}
                               onClick={() => handleTypeSelection(type.type)}
@@ -980,9 +1078,9 @@ export default function CreateCampaignPage() {
                               )}
                               <div className="flex flex-col items-center text-center">
                                 <div className="w-8 h-8 mb-3 flex items-center justify-center">
-                                  <IconComponent className="w-6 h-6 text-gray-600" />
+                                  <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
                                 </div>
-                                <h4 className="font-semibold text-gray-900 text-base mb-1">{type.label}</h4>
+                                <h4 className="font-semibold text-gray-900 text-sm sm:text-base mb-1">{type.label}</h4>
 
                                 {/* ROI Display - Styled like the image */}
                                 <div className={`text-sm font-semibold mb-3 px-3 py-1 rounded ${
@@ -999,7 +1097,7 @@ export default function CreateCampaignPage() {
                                   )}
                                 </div>
 
-                                <p className="text-sm text-gray-600 leading-tight">{type.description}</p>
+                                <p className="text-xs sm:text-sm text-gray-600 leading-tight">{type.description}</p>
                               </div>
                             </div>
                           );
@@ -1268,7 +1366,7 @@ export default function CreateCampaignPage() {
           <Card className="mt-8">
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Campaign Summary</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Campaign:</span>
                   <p className="font-medium">{formData.campaign_name || 'Not set'}</p>
