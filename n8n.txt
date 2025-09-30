@@ -1,0 +1,525 @@
+Tech Story - ReviewAnalysis
+
+
+
+By GenAIWorkggn
+
+6 min
+
+See views
+
+Add a reaction
+Project Overview
+
+This comprehensive guide demonstrates how to build an automated system that scrapes customer reviews from e-commerce platforms (like Zalora), stores them in Supabase, and leverages AI to classify and analyze reviews for actionable business insights.
+
+Architecture & Components
+
+Web Scraping Layer
+
+Node.js + Playwright or Python + Selenium
+
+Handles dynamic content loading
+
+Manages pagination and infinite scroll
+
+Bypasses basic anti-bot measures
+
+Extracts structured review data
+
+Database Layer (Supabase)
+
+PostgreSQL database with real-time features
+
+RESTful API for easy integration
+
+Built-in authentication and authorization
+
+AI Analysis Engine
+
+Gemini API for text classification
+
+Sentiment analysis (positive/negative/neutral)
+
+Automated tagging and categorization
+
+Theme extraction and confidence scoring
+
+Process Flow Chart
+
+
+E-commerce Platform (Zalora)
+           ↓
+    Web Scraping Engine
+    (Playwright/Selenium)
+           ↓
+    Data Validation & Cleaning
+           ↓
+    Supabase Database Storage
+           ↓
+    AI Analysis Queue
+           ↓
+    Gemini/GPT Analysis Engine
+           ↓
+    Enriched Data Storage
+           ↓
+    Business Intelligence Dashboard
+           ↓
+    Actionable Insights & Reports
+Implementation Guide
+
+Implementation Approach
+Phase 1: Foundation Setup
+Database Design Strategy
+
+Design normalized database schema with separate tables for products, reviews, and analysis results
+
+Implement proper indexing for performance optimization
+
+Set up real-time triggers for automated processing
+
+Create data validation rules and constraints
+
+Technology Stack Selection
+
+Web Scraping: Choose between Node.js with Playwright or Python with Selenium based on team expertise
+
+Database: Supabase for managed PostgreSQL with built-in APIs
+
+AI Processing: Gemini API or OpenAI GPT for text analysis
+
+Orchestration: Consider workflow management tools for production environments
+
+Phase 2: Data Collection Strategy
+Scraping Methodology
+
+Implement respectful scraping practices with appropriate delays
+
+Design robust error handling and retry mechanisms
+
+Create modular scrapers that can adapt to different e-commerce platforms
+
+Implement rotating user agents and proxy support for scale
+
+Data Quality Assurance
+
+Validate extracted data against predefined schemas
+
+Implement deduplication mechanisms
+
+Create data quality metrics and monitoring
+
+Establish data lineage tracking
+
+Phase 3: AI Analysis Pipeline
+Analysis Framework
+
+Design multi-dimensional analysis including sentiment, themes, and product aspects
+
+Implement confidence scoring for AI predictions
+
+Create feedback loops for model improvement
+
+Establish human-in-the-loop validation processes
+
+Processing Strategy
+
+Implement batch processing for efficiency
+
+Design real-time processing for urgent cases
+
+Create priority queues based on business importance
+
+Implement proper error handling and dead letter queues
+
+Step 1: Database
+
+
+
+brand_mentions
+Step 2: Web Scraping Implementation
+
+Option A: Node.js with Playwright
+
+
+
+// scraper.js
+const { chromium } = require('playwright');
+const { createClient } = require('@supabase/supabase-js');
+class ZaloraScraper {
+    constructor(supabaseUrl, supabaseKey) {
+        this.supabase = createClient(supabaseUrl, supabaseKey);
+        this.browser = null;
+        this.page = null;
+    }
+    async initialize() {
+        this.browser = await chromium.launch({ 
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        this.page = await this.browser.newPage();
+        // Set realistic user agent and viewport
+        await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+        await this.page.setViewportSize({ width: 1366, height: 768 });
+    }
+    async scrapeProductReviews(productUrl) {
+        try {
+            await this.page.goto(productUrl, { waitUntil: 'networkidle' });
+            // Wait for reviews section to load
+            await this.page.waitForSelector('[data-testid="reviews-section"]', { timeout: 10000 });
+            // Extract overall rating
+            const overallRating = await this.page.$eval('.rating-average', el => 
+                parseFloat(el.textContent.trim())
+            );
+            // Extract individual reviews
+            const reviews = await this.page.$$eval('.review-item', (elements) => {
+                return elements.map(el => {
+                    const rating = el.querySelector('.review-rating')?.textContent?.match(/\d+/)?.;
+                    const reviewText = el.querySelector('.review-text')?.textContent?.trim();
+                    const customerName = el.querySelector('.customer-name')?.textContent?.trim();
+                    const reviewDate = el.querySelector('.review-date')?.textContent?.trim();
+                    const size = el.querySelector('.size-info')?.textContent?.trim();
+                    return {
+                        rating: rating ? parseInt(rating) : null,
+                        review_text: reviewText,
+                        customer_name: customerName,
+                        review_date: reviewDate,
+                        size_purchased: size,
+                        verified_purchase: el.querySelector('.verified-badge') ? true : false
+                    };
+                });
+            });
+            // Extract product information
+            const productName = await this.page.$eval('.product-title', el => el.textContent.trim());
+            const productId = productUrl.split('/').pop().split('-').pop();
+            // Store reviews in database
+            for (const review of reviews) {
+                if (review.review_text) {
+                    await this.storeReview({
+                        product_id: productId,
+                        product_name: productName,
+                        product_url: productUrl,
+                        ...review
+                    });
+                }
+            }
+            return reviews;
+        } catch (error) {
+            console.error('Scraping error:', error);
+            throw error;
+        }
+    }
+    async storeReview(reviewData) {
+        try {
+            const { data, error } = await this.supabase
+                .from('reviews')
+                .insert([reviewData])
+                .select();
+            if (error) throw error;
+            console.log('Review stored:', data.id);
+            return data;
+        } catch (error) {
+            console.error('Database error:', error);
+            throw error;
+        }
+    }
+    async close() {
+        if (this.browser) {
+            await this.browser.close();
+        }
+    }
+}
+// Usage example
+async function main() {
+    const scraper = new ZaloraScraper(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY
+    );
+    try {
+        await scraper.initialize();
+        const productUrl = 'https://www.zalora.com.my/p/fitleasure-women-s-blue-tie-n-dye-printed-running-training-sports-bra-blue-3078170';
+        const reviews = await scraper.scrapeProductReviews(productUrl);
+        console.log(`Scraped ${reviews.length} reviews`);
+    } finally {
+        await scraper.close();
+    }
+}
+if (require.main === module) {
+    main().catch(console.error);
+}
+Option B: Python with Selenium
+
+
+
+# scraper.py
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+import json
+import time
+from datetime import datetime
+from supabase import create_client, Client
+class ZaloraScraper:
+    def __init__(self, supabase_url: str, supabase_key: str):
+        self.supabase: Client = create_client(supabase_url, supabase_key)
+        self.driver = None
+    def initialize_driver(self):
+        """Initialize Chrome driver with appropriate options"""
+        options = Options()
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        self.driver = webdriver.Chrome(options=options)
+        self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    def scrape_reviews(self, product_url: str) -> list:
+        """Scrape reviews from a Zalora product page"""
+        try:
+            self.driver.get(product_url)
+            # Wait for page to load
+            wait = WebDriverWait(self.driver, 10)
+            wait.until(EC.presence_of_element_located((By.CLASS_NAME, "product-title")))
+            # Extract product information
+            product_name = self.driver.find_element(By.CLASS_NAME, "product-title").text.strip()
+            product_id = product_url.split('/')[-1].split('-')[-1]
+            # Scroll to reviews section
+            reviews_section = self.driver.find_element(By.CSS_SELECTOR, "[data-testid='reviews-section']")
+            self.driver.execute_script("arguments.scrollIntoView();", reviews_section)
+            time.sleep(2)
+            # Extract reviews
+            review_elements = self.driver.find_elements(By.CLASS_NAME, "review-item")
+            reviews = []
+            for element in review_elements:
+                try:
+                    rating_element = element.find_element(By.CLASS_NAME, "review-rating")
+                    rating = int(rating_element.get_attribute("data-rating"))
+                    review_text = element.find_element(By.CLASS_NAME, "review-text").text.strip()
+                    customer_name = element.find_element(By.CLASS_NAME, "customer-name").text.strip()
+                    review_date = element.find_element(By.CLASS_NAME, "review-date").text.strip()
+                    # Optional fields
+                    try:
+                        size = element.find_element(By.CLASS_NAME, "size-info").text.strip()
+                    except:
+                        size = None
+                    verified = len(element.find_elements(By.CLASS_NAME, "verified-badge")) > 0
+                    review_data = {
+                        'product_id': product_id,
+                        'product_name': product_name,
+                        'product_url': product_url,
+                        'rating': rating,
+                        'review_text': review_text,
+                        'customer_name': customer_name,
+                        'review_date': review_date,
+                        'size_purchased': size,
+                        'verified_purchase': verified,
+                        'scraped_at': datetime.now().isoformat()
+                    }
+                    reviews.append(review_data)
+                except Exception as e:
+                    print(f"Error extracting review: {e}")
+                    continue
+            # Store reviews in database
+            for review in reviews:
+                self.store_review(review)
+            return reviews
+        except Exception as e:
+            print(f"Scraping error: {e}")
+            return []
+    def store_review(self, review_data: dict):
+        """Store review in Supabase database"""
+        try:
+            result = self.supabase.table('reviews').insert(review_data).execute()
+            print(f"Stored review: {result.data['id']}")
+            return result.data
+        except Exception as e:
+            print(f"Database error: {e}")
+    def close(self):
+        """Close the browser driver"""
+        if self.driver:
+            self.driver.quit()
+# Usage
+if __name__ == "__main__":
+    scraper = ZaloraScraper(
+        supabase_url="your-supabase-url",
+        supabase_key="your-supabase-anon-key"
+    )
+    try:
+        scraper.initialize_driver()
+        product_url = "https://www.zalora.com.my/p/fitleasure-women-s-blue-tie-n-dye-printed-running-training-sports-bra-blue-3078170"
+        reviews = scraper.scrape_reviews(product_url)
+        print(f"Successfully scraped {len(reviews)} reviews")
+    finally:
+        scraper.close()
+Step 3: AI Analysis Implementation
+
+
+# ai_analyzer.py
+import openai
+from supabase import create_client, Client
+import json
+from typing import List, Dict
+import re
+class ReviewAnalyzer:
+    def __init__(self, openai_api_key: str, supabase_url: str, supabase_key: str):
+        self.client = openai.OpenAI(api_key=openai_api_key)
+        self.supabase: Client = create_client(supabase_url, supabase_key)
+    def analyze_sentiment(self, review_text: str) -> Dict:
+        """Analyze sentiment using GPT-4"""
+        system_prompt = """You are an expert sentiment analyzer for e-commerce product reviews. 
+        Analyze the given review and provide:
+        1. Overall sentiment (positive, negative, or neutral)
+        2. Confidence score (0.0 to 1.0)
+        3. Key themes mentioned
+        4. Relevant tags for categorization
+        5. Product aspect categories (quality, fit, comfort, value, etc.)
+        Return the analysis in JSON format."""
+        user_prompt = f"""Analyze this product review:
+        "{review_text}"
+        Provide analysis in this JSON format:
+        {{
+            "sentiment": "positive|negative|neutral",
+            "confidence_score": 0.95,
+            "key_themes": ["comfort", "quality", "value"],
+            "tags": ["comfortable", "good quality", "worth the price"],
+            "categories": ["comfort", "quality", "value_for_money"]
+        }}"""
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=500,
+                temperature=0.1
+            )
+            analysis = json.loads(response.choices.message.content)
+            return analysis
+        except Exception as e:
+            print(f"AI analysis error: {e}")
+            return {
+                "sentiment": "neutral",
+                "confidence_score": 0.0,
+                "key_themes": [],
+                "tags": [],
+                "categories": []
+            }
+    def process_unanalyzed_reviews(self):
+        """Process all reviews that haven't been analyzed yet"""
+        # Get unprocessed reviews
+        result = self.supabase.table('reviews') \
+            .select('*') \
+            .is_('ai_sentiment', 'null') \
+            .limit(100) \
+            .execute()
+        reviews = result.data
+        processed_count = 0
+        for review in reviews:
+            try:
+                # Analyze the review
+                analysis = self.analyze_sentiment(review['review_text'])
+                # Update the review with AI analysis
+                update_data = {
+                    'ai_sentiment': analysis['sentiment'],
+                    'confidence_score': analysis['confidence_score'],
+                    'key_themes': analysis['key_themes'],
+                    'ai_tags': analysis['tags'],
+                    'ai_categories': analysis['categories'],
+                    'processed_at': 'now()'
+                }
+                self.supabase.table('reviews') \
+                    .update(update_data) \
+                    .eq('id', review['id']) \
+                    .execute()
+                processed_count += 1
+                print(f"Processed review {review['id']}: {analysis['sentiment']}")
+            except Exception as e:
+                print(f"Error processing review {review['id']}: {e}")
+                continue
+        return processed_count
+    def generate_insights_report(self, product_id: str = None) -> Dict:
+        """Generate insights report for all reviews or specific product"""
+        query = self.supabase.table('reviews').select('*')
+        if product_id:
+            query = query.eq('product_id', product_id)
+        result = query.execute()
+        reviews = result.data
+        if not reviews:
+            return {"error": "No reviews found"}
+        # Calculate metrics
+        total_reviews = len(reviews)
+        sentiment_distribution = {}
+        rating_distribution = {}
+        theme_frequency = {}
+        for review in reviews:
+            # Sentiment distribution
+            sentiment = review.get('ai_sentiment', 'unknown')
+            sentiment_distribution[sentiment] = sentiment_distribution.get(sentiment, 0) + 1
+            # Rating distribution
+            rating = review.get('rating')
+            if rating:
+                rating_distribution[rating] = rating_distribution.get(rating, 0) + 1
+            # Theme frequency
+            themes = review.get('key_themes', [])
+            if themes:
+                for theme in themes:
+                    theme_frequency[theme] = theme_frequency.get(theme, 0) + 1
+        # Calculate percentages
+        for sentiment in sentiment_distribution:
+            sentiment_distribution[sentiment] = {
+                'count': sentiment_distribution[sentiment],
+                'percentage': round((sentiment_distribution[sentiment] / total_reviews) * 100, 2)
+            }
+        return {
+            'total_reviews': total_reviews,
+            'sentiment_distribution': sentiment_distribution,
+            'rating_distribution': rating_distribution,
+            'top_themes': sorted(theme_frequency.items(), key=lambda x: x, reverse=True)[:10],
+            'average_rating': sum(r.get('rating', 0) for r in reviews) / len([r for r in reviews if r.get('rating')]),
+            'processed_reviews': len([r for r in reviews if r.get('ai_sentiment')])
+        }
+# Usage example
+if __name__ == "__main__":
+    analyzer = ReviewAnalyzer(
+        openai_api_key="your-openai-api-key",
+        supabase_url="your-supabase-url",
+        supabase_key="your-supabase-key"
+    )
+    # Process unanalyzed reviews
+    processed = analyzer.process_unanalyzed_reviews()
+    print(f"Processed {processed} reviews")
+    # Generate insights report
+    insights = analyzer.generate_insights_report()
+    print(json.dumps(insights, indent=2))
+Installation & Setup Instructions
+1. Prerequisites
+
+
+
+bash
+# For Node.js approach
+npm init -y
+npm install playwright @supabase/supabase-js dotenv
+# For Python approach  
+pip install selenium supabase openai python-dotenv schedule beautifulsoup4
+2. Environment Configuration
+Create .env file:
+
+
+
+
+text
+SUPABASE_URL=your-supabase-project-url
+SUPABASE_ANON_KEY=your-supabase-anon-key
+OPENAI_API_KEY=your-openai-api-key
+3. Browser Driver Setup
+
+
+bash
+# For Playwright
+npx playwright install chromium
+# For Selenium
+# Download ChromeDriver from https://chromedriver.chromium.org/
