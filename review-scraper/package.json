@@ -1,0 +1,22 @@
+{
+  "name": "review-scraper",
+  "version": "1.0.0",
+  "description": "E-commerce review scraping and AI analysis system",
+  "type": "module",
+  "scripts": {
+    "scrape": "node src/scraper.js",
+    "import": "node src/manual-import.js",
+    "analyze": "node src/ai-analyzer-integrated.js",
+    "insights": "node src/insights-generator.js",
+    "pipeline": "node src/pipeline.js",
+    "report": "node src/generate-customer-report.js",
+    "test": "node test.js",
+    "check": "node check-status.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1",
+    "playwright": "^1.40.0"
+  }
+}

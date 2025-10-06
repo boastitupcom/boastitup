@@ -7,12 +7,18 @@
       "WebSearch",
       "WebFetch(domain:supabase.com)",
       "Bash(set SUPABASE_ACCESS_TOKEN=sbp_b75ca290d94ff682bf32f58aff723523)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(npm run analyze:*)",
+      "Bash(npm run insights:*)",
+      "Bash(timeout:*)",
+      "Bash(pnpm add:*)"
     ],
     "deny": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

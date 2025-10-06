@@ -1,0 +1,337 @@
+{
+  "status": "OK",
+  "request_id": "aa4e7fd0-360c-44f0-8136-d1934943726e",
+  "parameters": {
+    "asin": "B094129JM7",
+    "country": "IN",
+    "sort_by": "TOP_REVIEWS",
+    "verified_purchases_only": true,
+    "images_or_videos_only": false,
+    "current_format_only": false,
+    "star_rating": "ALL",
+    "page": 1,
+    "language": "en_IN"
+  },
+  "data": {
+    "asin": "B094129JM7",
+    "total_reviews": 3,
+    "total_ratings": null,
+    "country": "IN",
+    "domain": "www.amazon.in",
+    "reviews": [
+      {
+        "review_id": "R3TRZWEHHUING",
+        "review_title": "best test ever and value for money",
+        "review_comment": "the teste is really good and it's actually a value for money product.",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.in/gp/customer-reviews/R3TRZWEHHUING",
+        "review_author_id": "AHD55QHIKWPTKX4PDWBD42OADVZA",
+        "review_author": "Ankit Kumar Saini",
+        "review_author_url": "https://www.amazon.in/gp/profile/amzn1.account.AHD55QHIKWPTKX4PDWBD42OADVZA/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://images-eu.ssl-images-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in India on 16 April 2024",
+        "is_verified_purchase": true,
+        "helpful_vote_statement": "One person found this helpful",
+        "reviewed_product_asin": "B094129JM7",
+        "reviewed_product_variant": {},
+        "is_vine": false
+      },
+      {
+        "review_id": "R9XS8RVE15909",
+        "review_title": "Fake",
+        "review_comment": "It’s fake product check online",
+        "review_star_rating": "1",
+        "review_link": "https://www.amazon.in/gp/customer-reviews/R9XS8RVE15909",
+        "review_author_id": "AFRSQNI4CS4L3R35TWRT23KB4ZWA",
+        "review_author": "Dev",
+        "review_author_url": "https://www.amazon.in/gp/profile/amzn1.account.AFRSQNI4CS4L3R35TWRT23KB4ZWA/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://images-eu.ssl-images-amazon.com/images/S/amazon-avatars-global/b2dc68f3-9bab-4193-a9a8-bc507c2be582._CR0,0,500,500_SX48_.jpg",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in India on 20 November 2023",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B094129JM7",
+        "reviewed_product_variant": {},
+        "is_vine": false
+      },
+      {
+        "review_id": "R1R77SNRAZ2WCD",
+        "review_title": "Inner seal not proper fix",
+        "review_comment": "Delivery time inner seal not fix",
+        "review_star_rating": "1",
+        "review_link": "https://www.amazon.in/gp/customer-reviews/R1R77SNRAZ2WCD",
+        "review_author_id": "AGAO6IBKE5DHOERSJ3CCTG354D3Q",
+        "review_author": "Very bad experiance.inner seal remove for yard.no responce amazon help line.",
+        "review_author_url": "https://www.amazon.in/gp/profile/amzn1.account.AGAO6IBKE5DHOERSJ3CCTG354D3Q/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://images-eu.ssl-images-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [
+          "https://m.media-amazon.com/images/I/61dGPQx9WZL.jpg"
+        ],
+        "review_video": null,
+        "review_date": "Reviewed in India on 12 October 2023",
+        "is_verified_purchase": true,
+        "helpful_vote_statement": "One person found this helpful",
+        "reviewed_product_asin": "B094129JM7",
+        "reviewed_product_variant": {},
+        "is_vine": false
+      }
+    ]
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{
+  "status": "OK",
+  "request_id": "35e1ed84-ed90-41d0-8512-3cee944d595a",
+  "parameters": {
+    "asin": "B0DQDDMLXL",
+    "country": "US",
+    "sort_by": "TOP_REVIEWS",
+    "verified_purchases_only": true,
+    "images_or_videos_only": false,
+    "current_format_only": false,
+    "star_rating": "ALL",
+    "page": 1,
+    "language": "en_US"
+  },
+  "data": {
+    "asin": "B0DQDDMLXL",
+    "total_reviews": 179,
+    "total_ratings": null,
+    "country": "US",
+    "domain": "www.amazon.com",
+    "reviews": [
+      {
+        "review_id": "R1IZUA3GOBBRO2",
+        "review_title": "A good product.  Works for me.",
+        "review_comment": "Very Satisfied",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/R1IZUA3GOBBRO2",
+        "review_author_id": "AFDZ6VWLSI75JTNTXFS7U2L3U5VQ",
+        "review_author": "Debra",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AFDZ6VWLSI75JTNTXFS7U2L3U5VQ/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://m.media-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on September 29, 2025",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "R1PN6TQKVZGAUA",
+        "review_title": "Good price",
+        "review_comment": "Easy to swallow.  Not to big.",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/R1PN6TQKVZGAUA",
+        "review_author_id": "AHYPFSTL3HALZQZALB4WNHTI7JLQ",
+        "review_author": "Babs",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AHYPFSTL3HALZQZALB4WNHTI7JLQ/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://m.media-amazon.com/images/S/amazon-avatars-global/83c0a068-8684-4c28-9489-360fdbfc9399._CR0,0,1125,1125_SX48_.jpg",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on September 21, 2025",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "RWQQNX9VG79",
+        "review_title": "Great nutrition supplement.",
+        "review_comment": "I have been taking this supplement for almost a year.It gives my body good energy and balance.Recommended to friends and family.",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/RWQQNX9VG79",
+        "review_author_id": "AHZP7CI5SUA4IXSERG6ECAYT374Q",
+        "review_author": "Trina G",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AHZP7CI5SUA4IXSERG6ECAYT374Q/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://m.media-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on September 6, 2025",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "RLBU66B0IQACA",
+        "review_title": "Easy to swallow",
+        "review_comment": "I just started taking but seems to be a good quality vitamin.",
+        "review_star_rating": "4",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/RLBU66B0IQACA",
+        "review_author_id": "AEVHXR3O4BFEMPTPVSBRJKBYX3DA",
+        "review_author": "Cat Dun",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AEVHXR3O4BFEMPTPVSBRJKBYX3DA/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://images-na.ssl-images-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on August 8, 2025",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "R2XZJ3VITPAEC4",
+        "review_title": "Highly recommend this product",
+        "review_comment": "few weeks now, and I’m really impressed with the results. The capsules are easy to swallow and don't leave any aftertaste. I appreciate that it’s Non-GMO, gluten-free, and made in the USA. The combination of Vitamin D3 (5000 IU) and K2 (90 mcg) has been great for supporting my overall health, especially for bone and immune support. The 120 capsules offer great value for the price.",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/R2XZJ3VITPAEC4",
+        "review_author_id": "AEPQLWD4OSVCHL7VWDWKHWXN2RZA",
+        "review_author": "Michael",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AEPQLWD4OSVCHL7VWDWKHWXN2RZA/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://images-na.ssl-images-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on March 13, 2025",
+        "is_verified_purchase": true,
+        "helpful_vote_statement": "2 people found this helpful",
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "R1182O4FFKB36",
+        "review_title": "Great Combo for Bone & Immune Support!",
+        "review_comment": "It’s easy to take, and I love that it combines D3 for immune support and K2 for better calcium absorption. I’ve noticed a boost in my energy levels and overall well-being since adding it to my routine.\n I also appreciate that it’s free from artificial additives, sugar and GMO. If you are looking to support bone health and immunity - it’s a match!",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/R1182O4FFKB36",
+        "review_author_id": "AH6YMYVZJFTG3WDZPEF7GQ5FAUCQ",
+        "review_author": "Julia",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AH6YMYVZJFTG3WDZPEF7GQ5FAUCQ/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://images-na.ssl-images-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on March 27, 2025",
+        "is_verified_purchase": true,
+        "helpful_vote_statement": "2 people found this helpful",
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "R3RKFCTHVLHK5I",
+        "review_title": "Wonderful",
+        "review_comment": "Great value",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/R3RKFCTHVLHK5I",
+        "review_author_id": "AFUPEVZT6C4JE6TLSGPTSH3X5ANQ",
+        "review_author": "B",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AFUPEVZT6C4JE6TLSGPTSH3X5ANQ/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://m.media-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on September 5, 2025",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "R24V3P5ULCZH0B",
+        "review_title": "Works as intended according to my Dr.",
+        "review_comment": "Decent supplement.",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/R24V3P5ULCZH0B",
+        "review_author_id": "AHORPPJ4WO47CAEYJJ3XT7BHTNRQ",
+        "review_author": "Deb R",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AHORPPJ4WO47CAEYJJ3XT7BHTNRQ/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://m.media-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on August 14, 2025",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "R19JFHDIARM98Z",
+        "review_title": "Good results. Helps with Calcium, regulates mood and Bone Mineral Density",
+        "review_comment": "Good results. Nice product and I've noticed a difference already, as with any vitamin just be sure you take it as recommended and don't skip doses. Vitamin D3 and Vitamin K2 are essential nutrients that work together to help your body absorb, use calcium, regulate mood and Bone Mineral Density.",
+        "review_star_rating": "4",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/R19JFHDIARM98Z",
+        "review_author_id": "AGNELXIDSVGO7Z77OJCCO2DABQWA",
+        "review_author": "Amazon Customer",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AGNELXIDSVGO7Z77OJCCO2DABQWA/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://m.media-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on September 8, 2025",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      },
+      {
+        "review_id": "R14CSJYP4A0GP3",
+        "review_title": "Los productos de buena calidad",
+        "review_comment": "Muy buenas vitaminas",
+        "review_star_rating": "5",
+        "review_link": "https://www.amazon.com/gp/customer-reviews/R14CSJYP4A0GP3",
+        "review_author_id": "AEA6BXJ6XIUGV3BXVDAHWXGSSSDA",
+        "review_author": "Saira",
+        "review_author_url": "https://www.amazon.com/gp/profile/amzn1.account.AEA6BXJ6XIUGV3BXVDAHWXGSSSDA/ref=cm_cr_getr_d_gw_btm?ie=UTF8",
+        "review_author_avatar": "https://m.media-amazon.com/images/S/amazon-avatars-global/default._CR0,0,1024,1024_SX48_.png",
+        "review_images": [],
+        "review_video": null,
+        "review_date": "Reviewed in the United States on September 26, 2025",
+        "is_verified_purchase": true,
+        "reviewed_product_asin": "B0DQDDMLXL",
+        "reviewed_product_url": "https://www.amazon.com/dp/B0DQDDMLXL",
+        "reviewed_product_variant": {
+          "Style": "120 Count(Pack of 1)"
+        },
+        "is_vine": false
+      }
+    ]
+  }
+}
