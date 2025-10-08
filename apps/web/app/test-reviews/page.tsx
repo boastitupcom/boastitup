@@ -10,6 +10,19 @@ interface Product {
   sku: string;
 }
 
+interface ReviewAnalysis {
+  summary: string;
+  themes: string[];
+  primaryTheme: {
+    name: string;
+    totalMentions: number;
+    positiveMentions: number;
+    negativeMentions: number;
+    summary: string;
+    snippets: string[];
+  };
+}
+
 interface Stats {
   totalReviews: number;
   avgRating: string;
@@ -23,9 +36,12 @@ interface ReportData {
   productId: string;
   productName: string;
   reportMarkdown: string;
+  analysis: ReviewAnalysis;
   stats: Stats;
   generatedAt: string;
 }
+
+const GEMINI_API_KEY = "AIzaSyB_KXOm3MQDLANiVTyuSPpLP-gLQEE67p0";
 
 export default function TestReviewsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -34,7 +50,6 @@ export default function TestReviewsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch products on mount
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -42,7 +57,6 @@ export default function TestReviewsPage() {
   const fetchProducts = async () => {
     try {
       const supabase = createClient();
-
       const { data, error } = await supabase
         .from("brand_products")
         .select("id, name, sku")
@@ -55,7 +69,7 @@ export default function TestReviewsPage() {
     }
   };
 
-  const fetchReport = async () => {
+  const generateReport = async () => {
     if (!selectedProduct) return;
 
     setLoading(true);
@@ -63,14 +77,159 @@ export default function TestReviewsPage() {
     setReport(null);
 
     try {
-      const response = await fetch(`/api/reviews/customer-report/${selectedProduct}`);
-      const data = await response.json();
+      const supabase = createClient();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate report");
+      // Fetch reviews directly from Supabase
+      const { data: reviews, error: reviewError } = await supabase
+        .from("product_reviews")
+        .select(`
+          *,
+          brand_products (
+            name,
+            sku
+          )
+        `)
+        .eq("product_id", selectedProduct);
+
+      if (reviewError) throw reviewError;
+      if (!reviews || reviews.length === 0) {
+        throw new Error("No reviews found for this product");
       }
 
-      setReport(data);
+      const productName = reviews[0].brand_products?.name || "Product";
+
+      // Prepare review data
+      const reviewsData = reviews.map((r: any, i: number) => ({
+        id: i + 1,
+        rating: r.rating,
+        text: r.review_text,
+        customer: r.customer_name || "Anonymous",
+      }));
+
+      const prompt = `Objective: Analyze the provided product reviews to generate a structured and insightful customer sentiment summary.
+
+Input: A collection of customer reviews for a single product.
+
+Instructions:
+
+Your task is to transform the raw customer reviews into a formatted summary. You must generate the output as valid JSON.
+
+1. Comprehensive Analysis:
+- Read through all the provided reviews to understand the overall customer experience.
+- Identify the 2-3 most significant or frequently mentioned key themes (e.g., "Taste," "Packaging," "Value for Money," "Authenticity", "Effectiveness").
+- For each review mentioning a theme, determine if the sentiment is positive or negative.
+
+2. Output Generation:
+Return a JSON object with this EXACT structure:
+
+{
+  "summary": "A concise, 1-2 sentence paragraph that summarizes the overall sentiment and the most critical findings from the reviews. This paragraph should be a narrative synthesis, mentioning both the positive highlights and the major complaints.",
+  "themes": ["Theme 1", "Theme 2", "Theme 3"],
+  "primaryTheme": {
+    "name": "Most Important Theme Name",
+    "totalMentions": 0,
+    "positiveMentions": 0,
+    "negativeMentions": 0,
+    "summary": "One clear sentence that summarizes what customers are saying about this specific theme.",
+    "snippets": [
+      "Short quote or paraphrase with the **most relevant phrase** in bold",
+      "Another snippet with **key phrase** bolded",
+      "Third snippet with **important words** emphasized"
+    ]
+  }
+}
+
+IMPORTANT:
+- Return ONLY valid JSON, no markdown, no explanation
+- Bold text in snippets using **text** format
+- Count mentions accurately
+- Include 2-4 snippets maximum
+- Each snippet should be a direct quote or close paraphrase from the reviews
+
+REVIEWS DATA:
+${JSON.stringify(reviewsData, null, 2)}`;
+
+      // Call Gemini API directly from client (bypasses server regional restrictions)
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 2048,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API error: ${errorText}`);
+      }
+
+      const data = await response.json();
+      const text = data.candidates[0].content.parts[0].text;
+
+      // Extract JSON from response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("Invalid JSON response from AI");
+      }
+
+      const analysis: ReviewAnalysis = JSON.parse(jsonMatch[0]);
+
+      // Generate formatted markdown
+      const reportMarkdown = `### **Customers say**
+
+${analysis.summary}
+
+> 🤖 Generated from the text of customer reviews
+
+
+${analysis.themes.map((t) => `✅ ${t}`).join("   ")}
+
+**${analysis.primaryTheme.totalMentions} customers mention "${analysis.primaryTheme.name}"**
+
+${analysis.primaryTheme.positiveMentions} positive   |   ${analysis.primaryTheme.negativeMentions} negative
+
+${analysis.primaryTheme.summary}
+
+${analysis.primaryTheme.snippets.map((s) => `• ${s}`).join("\n\n")}`;
+
+      // Calculate stats
+      const stats: Stats = {
+        totalReviews: reviews.length,
+        avgRating: (
+          reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) /
+          reviews.length
+        ).toFixed(2),
+        positiveCount: reviews.filter((r: any) => r.ai_sentiment === "positive")
+          .length,
+        negativeCount: reviews.filter(
+          (r: any) => r.ai_sentiment === "negative"
+        ).length,
+        neutralCount: reviews.filter((r: any) => r.ai_sentiment === "neutral")
+          .length,
+      };
+
+      setReport({
+        success: true,
+        productId: selectedProduct,
+        productName,
+        reportMarkdown,
+        analysis,
+        stats,
+        generatedAt: new Date().toISOString(),
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -109,7 +268,7 @@ export default function TestReviewsPage() {
               </select>
             </div>
             <button
-              onClick={fetchReport}
+              onClick={generateReport}
               disabled={!selectedProduct || loading}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >

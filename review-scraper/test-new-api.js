@@ -1,22 +1,29 @@
-// API Route: Generate customer report for a product
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@boastitup/supabase/server';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-interface ReviewAnalysis {
-  summary: string;
-  themes: string[];
-  primaryTheme: {
-    name: string;
-    totalMentions: number;
-    positiveMentions: number;
-    negativeMentions: number;
-    summary: string;
-    snippets: string[];
-  };
-}
+dotenv.config();
 
-async function generateWithGemini(reviews: any[]) {
-  // Prepare comprehensive review data for single API call
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const API_KEY = 'AIzaSyB_KXOm3MQDLANiVTyuSPpLP-gLQEE67p0';
+
+async function testNewAPI() {
+  console.log('🔍 Fetching reviews from Supabase...\n');
+
+  const productId = 'ba55c9ce-34ff-4b1f-a3d0-a8242dae93e2'; // Nitra Whey
+
+  const { data: reviews, error } = await supabase
+    .from('product_reviews')
+    .select('*')
+    .eq('product_id', productId);
+
+  if (error) {
+    console.error('❌ Error fetching reviews:', error);
+    return;
+  }
+
+  console.log(`✅ Found ${reviews.length} reviews\n`);
+
+  // Prepare review data
   const reviewsData = reviews.map((r, i) => ({
     id: i + 1,
     rating: r.rating,
@@ -67,8 +74,10 @@ IMPORTANT:
 REVIEWS DATA:
 ${JSON.stringify(reviewsData, null, 2)}`;
 
+  console.log('🤖 Calling Gemini API...\n');
+
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`,
     {
       method: 'POST',
       headers: {
@@ -88,56 +97,32 @@ ${JSON.stringify(reviewsData, null, 2)}`;
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Gemini API error: ${error}`);
+    console.error('❌ API Error:', error);
+    return;
   }
 
   const data = await response.json();
   const text = data.candidates[0].content.parts[0].text;
 
-  // Extract JSON from response (in case there's markdown formatting)
+  console.log('📄 Raw AI Response:\n');
+  console.log(text);
+  console.log('\n' + '='.repeat(80) + '\n');
+
+  // Extract JSON
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error('Invalid JSON response from AI');
+    console.error('❌ Could not extract JSON from response');
+    return;
   }
 
-  return JSON.parse(jsonMatch[0]) as ReviewAnalysis;
-}
+  const analysis = JSON.parse(jsonMatch[0]);
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { productId: string } }
-) {
-  try {
-    const { productId } = params;
-    const supabase = await createClient();
+  console.log('✅ Parsed JSON:\n');
+  console.log(JSON.stringify(analysis, null, 2));
+  console.log('\n' + '='.repeat(80) + '\n');
 
-    // Fetch reviews for the product in single query
-    const { data: reviews, error } = await supabase
-      .from('product_reviews')
-      .select(`
-        *,
-        brand_products (
-          name,
-          sku
-        )
-      `)
-      .eq('product_id', productId);
-
-    if (error) throw error;
-    if (!reviews || reviews.length === 0) {
-      return NextResponse.json(
-        { error: 'No reviews found for this product' },
-        { status: 404 }
-      );
-    }
-
-    const productName = reviews[0].brand_products?.name || 'Product';
-
-    // Single AI API call with all review data
-    const analysis = await generateWithGemini(reviews);
-
-    // Generate formatted markdown from JSON
-    const reportMarkdown = `### **Customers say**
+  // Generate formatted markdown
+  const reportMarkdown = `### **Customers say**
 
 ${analysis.summary}
 
@@ -154,27 +139,10 @@ ${analysis.themes.map(t => `✅ ${t}`).join(' &nbsp;&nbsp;&nbsp; ')}
 >
 ${analysis.primaryTheme.snippets.map(s => `> ${s}`).join('\n>\n')}`;
 
-    // Calculate stats
-    const stats = {
-      totalReviews: reviews.length,
-      avgRating: (
-        reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviews.length
-      ).toFixed(2),
-      positiveCount: reviews.filter((r: any) => r.ai_sentiment === 'positive').length,
-      negativeCount: reviews.filter((r: any) => r.ai_sentiment === 'negative').length,
-      neutralCount: reviews.filter((r: any) => r.ai_sentiment === 'neutral').length,
-    };
-
-    return NextResponse.json({
-      success: true,
-      productId,
-      productName,
-      reportMarkdown,
-      analysis, // Include raw JSON analysis
-      stats,
-      generatedAt: new Date().toISOString(),
-    });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  console.log('📝 Formatted Markdown Report:\n');
+  console.log(reportMarkdown);
+  console.log('\n' + '='.repeat(80) + '\n');
+  console.log('✅ TEST COMPLETED SUCCESSFULLY!\n');
 }
+
+testNewAPI().catch(console.error);
