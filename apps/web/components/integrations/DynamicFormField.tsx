@@ -6,9 +6,9 @@
 'use client';
 
 import React from 'react';
-import { Input } from '@repo/ui/components/ui/input';
-import { Label } from '@repo/ui/components/ui/label';
-import { Textarea } from '@repo/ui/components/ui/textarea';
+import { Input } from '@boastitup/ui/components/ui/input';
+import { Label } from '@boastitup/ui/components/ui/label';
+import { Textarea } from '@boastitup/ui/components/ui/textarea';
 import type { ConfigField } from '@/types/integrations';
 
 interface DynamicFormFieldProps {

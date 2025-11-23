@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@repo/supabase/server';
+import { createClient } from '@boastitup/supabase/server';
 import type { TestIntegrationRequest, TestConnectionResult } from '@/types/integrations';
 
 /**

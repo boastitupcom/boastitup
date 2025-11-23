@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@repo/supabase/server';
+import { createClient } from '@boastitup/supabase/server';
 import { encryptCredentials } from '@/lib/integrations/encryption';
 import type {
   IntegrationsResponse,

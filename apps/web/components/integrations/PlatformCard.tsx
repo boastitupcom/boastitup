@@ -7,9 +7,9 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardFooter, CardHeader } from '@repo/ui/components/ui/card';
-import { Button } from '@repo/ui/components/ui/button';
-import { Badge } from '@repo/ui/components/ui/badge';
+import { Card, CardContent, CardFooter, CardHeader } from '@boastitup/ui/components/ui/card';
+import { Button } from '@boastitup/ui/components/ui/button';
+import { Badge } from '@boastitup/ui/components/ui/badge';
 import type { IntegrationDefinition } from '@/types/integrations';
 
 interface PlatformCardProps {
