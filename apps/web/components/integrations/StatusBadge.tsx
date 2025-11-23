@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Badge } from '@boastitup/ui/components/ui/badge';
+import { Badge } from '@boastitup/ui';
 import type { IntegrationStatus } from '@/types/integrations';
 
 interface StatusBadgeProps {

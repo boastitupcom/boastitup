@@ -9,8 +9,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@boastitup/ui/components/ui/button';
-import { Card, CardContent, CardHeader } from '@boastitup/ui/components/ui/card';
+import { Button, Card, CardContent, CardHeader } from '@boastitup/ui';
 import { DynamicFormField } from '@/components/integrations/DynamicFormField';
 import type {
   IntegrationDefinition,

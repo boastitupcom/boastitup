@@ -6,8 +6,7 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardFooter, CardHeader } from '@boastitup/ui/components/ui/card';
-import { Button } from '@boastitup/ui/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, Button } from '@boastitup/ui';
 import { StatusBadge } from './StatusBadge';
 import type { TenantIntegration } from '@/types/integrations';
 
